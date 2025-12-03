@@ -142,7 +142,44 @@ describe('FeatureName', () => {
 
 ## Feature Backlog
 
-### Priority 1: Core Gameplay
+### Priority 1: Visual Overhaul (2025 Graphics)
+
+#### Particle System ✅ COMPLETE
+- **GPU-accelerated particles** rendered via WebGL
+- **Effect presets**:
+  - Pellet eat: 8-12 particles, quick burst
+  - Power pellet eat: 20+ particles with glow
+  - Ghost eat: 30 particles, explosion with gravity
+  - Pac-Man death: 50 particles, dramatic dispersal
+  - Power mode: Continuous sparkles around Pac-Man
+- **Files**: `src/systems/ParticleSystem.ts`, `tests/systems/ParticleSystem.test.ts`
+- **Tests needed**:
+  - Particle lifecycle (spawn, update, die)
+  - Max particle limits
+  - Render data generation
+  - Effect preset configurations
+
+#### Post-Processing Effects ✅ COMPLETE
+- **Bloom/Glow**: CSS drop-shadow approximation (performant)
+- **Screen shake**: On ghost eat, death, power pellet pickup
+- **Flash overlay**: Color flashes for feedback
+- **Files**: `src/systems/PostProcessing.ts`
+- **Tests**: 16 passing
+
+#### Splash Screen ✅ COMPLETE
+- **Animated neon logo**: "PAC-MAN" with letter-by-letter glow
+- **Floating ghosts**: Background animation
+- **High score display**: Prominent, with glow
+- **Press Start**: Pulsing animation
+- **Smooth transition**: Fade into game
+- **Files**: Updated `index.html`, `styles.css`, `main.ts`
+
+#### Motion & Animation Polish ✅ COMPLETE
+- **Particle effects**: Pellet eat, ghost eat, death explosion
+- **Enhanced death**: Particle burst + screen shake
+- **Power mode indicator**: Pulsing canvas border
+
+### Priority 2: Core Gameplay
 
 #### Fruit Spawning
 - **Trigger**: Appears when 70 pellets eaten, again at 170

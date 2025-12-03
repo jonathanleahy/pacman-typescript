@@ -7,7 +7,40 @@
   <link rel="stylesheet" href="/src/styles.css">
 </head>
 <body>
-  <div id="game-container">
+  <!-- Splash Screen - First thing player sees -->
+  <div id="splash-screen">
+    <div class="splash-background">
+      <div class="floating-ghost ghost-red"></div>
+      <div class="floating-ghost ghost-pink"></div>
+      <div class="floating-ghost ghost-cyan"></div>
+      <div class="floating-ghost ghost-orange"></div>
+    </div>
+    <div class="splash-content">
+      <h1 class="neon-title">
+        <span class="letter" style="--i:0">P</span>
+        <span class="letter" style="--i:1">A</span>
+        <span class="letter" style="--i:2">C</span>
+        <span class="letter" style="--i:3">-</span>
+        <span class="letter" style="--i:4">M</span>
+        <span class="letter" style="--i:5">A</span>
+        <span class="letter" style="--i:6">N</span>
+      </h1>
+      <div class="splash-high-score">
+        <span class="label">HIGH SCORE</span>
+        <span id="splash-high-score" class="score-value">00</span>
+      </div>
+      <div class="splash-pacman"></div>
+      <p class="press-start">PRESS SPACE TO START</p>
+      <div class="splash-controls">
+        <p>Arrow Keys or WASD to Move</p>
+        <p>P to Pause</p>
+      </div>
+    </div>
+    <canvas id="splash-particles"></canvas>
+  </div>
+
+  <!-- Main Game Container -->
+  <div id="game-container" class="hidden">
     <div id="header">
       <div id="score-display">
         <span class="label">1UP</span>
@@ -27,14 +60,9 @@
       <div id="lives-display"></div>
       <div id="fruit-display"></div>
     </div>
-    <div id="start-screen">
-      <h1>PAC-MAN</h1>
-      <p>Press SPACE or Click to Start</p>
-      <div class="controls">
-        <p>Arrow Keys or WASD to Move</p>
-        <p>P to Pause</p>
-      </div>
-    </div>
+
+    <!-- Flash overlay for effects -->
+    <div id="flash-overlay"></div>
   </div>
   <script type="module" src="/src/main.ts"></script>
 </body>

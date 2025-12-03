@@ -41,6 +41,8 @@ import { WebGLRenderer } from './systems/WebGLRenderer';
 import { Input } from './systems/Input';
 import { Collision, CollisionResult } from './systems/Collision';
 import { Sound } from './systems/Sound';
+import { ParticleSystem, EffectPresets } from './systems/ParticleSystem';
+import { PostProcessingManager, ShakePresets, FlashPresets } from './systems/PostProcessing';
 import { PacMan } from './entities/PacMan';
 import { Ghost } from './entities/Ghost';
 import { Blinky } from './entities/Blinky';
@@ -56,11 +58,10 @@ import {
   FRIGHT_DURATION,
   SCATTER_TIMES,
   CHASE_TIMES,
-  SCORE_PELLET,
-  SCORE_POWER_PELLET,
   EXTRA_LIFE_SCORE,
   TARGET_FPS,
   FRAME_TIME,
+  SCALED_TILE,
 } from './constants';
 import { SoundType } from './types';
 
@@ -89,6 +90,12 @@ export class Game {
 
   /** Sound system */
   private sound: Sound;
+
+  /** Particle system for visual effects */
+  private particles: ParticleSystem;
+
+  /** Post-processing effects (shake, flash, etc.) */
+  private effects: PostProcessingManager;
 
   /** Pac-Man entity */
   private pacman: PacMan;
@@ -154,6 +161,10 @@ export class Game {
     this.collision = new Collision();
     this.sound = new Sound();
 
+    // Initialize 2025 visual effects systems
+    this.particles = new ParticleSystem(1000); // Up to 1000 particles
+    this.effects = new PostProcessingManager();
+
     // Initialize entities
     this.pacman = new PacMan();
 
@@ -178,20 +189,19 @@ export class Game {
 
   /**
    * Start the game
+   *
+   * Called after splash screen transition. The game starts
+   * in READY state with the intro music playing.
    */
   start(): void {
     this.running = true;
-    this.state = GameState.START_SCREEN;
-
-    // Show start screen
-    const startScreen = document.getElementById('start-screen');
-    if (startScreen) {
-      startScreen.classList.remove('hidden');
-    }
 
     // Start game loop
     this.lastTime = performance.now();
     this.gameLoop(this.lastTime);
+
+    // Go directly to starting a new game
+    this.startNewGame();
   }
 
   /**
@@ -269,6 +279,9 @@ export class Game {
 
       case GameState.PLAYING:
         this.updatePlaying();
+        // Update visual effects
+        this.particles.update();
+        this.effects.update();
         break;
 
       case GameState.DYING:
@@ -435,6 +448,12 @@ export class Game {
       }
     }
 
+    // Remove power mode visual indicator
+    const gameContainer = document.getElementById('game-container');
+    if (gameContainer) {
+      gameContainer.classList.remove('power-mode');
+    }
+
     // Switch back to siren
     this.sound.stopFrightSound();
     const intensity = this.pelletsEaten / (this.pelletsEaten + this.collision.getPelletsRemaining());
@@ -489,6 +508,11 @@ export class Game {
     // Update renderer
     if (result.tile) {
       this.renderer.eatPellet(result.tile.col, result.tile.row);
+
+      // Emit particles at pellet position
+      const x = result.tile.col * SCALED_TILE + SCALED_TILE / 2;
+      const y = result.tile.row * SCALED_TILE + SCALED_TILE / 2;
+      this.particles.emit(x, y, EffectPresets.PELLET_EAT);
     }
 
     // Play sound
@@ -515,6 +539,20 @@ export class Game {
     // Update renderer
     if (result.tile) {
       this.renderer.eatPellet(result.tile.col, result.tile.row);
+
+      // Big particle burst for power pellet
+      const x = result.tile.col * SCALED_TILE + SCALED_TILE / 2;
+      const y = result.tile.row * SCALED_TILE + SCALED_TILE / 2;
+      this.particles.emit(x, y, EffectPresets.POWER_PELLET_EAT);
+    }
+
+    // Screen flash for emphasis
+    this.effects.flash(FlashPresets.POWER_PELLET);
+
+    // Add power mode visual indicator
+    const gameContainer = document.getElementById('game-container');
+    if (gameContainer) {
+      gameContainer.classList.add('power-mode');
     }
 
     // Start frightened mode
@@ -530,6 +568,19 @@ export class Game {
 
     // Stop sounds
     this.sound.stopAll();
+
+    // Screen shake for impact
+    this.effects.shake(ShakePresets.DEATH);
+
+    // Flash red
+    this.effects.flash(FlashPresets.DAMAGE);
+
+    // Emit death particles
+    this.particles.emit(
+      this.pacman.position.x,
+      this.pacman.position.y,
+      EffectPresets.PACMAN_DEATH
+    );
 
     // Freeze everything
     this.pacman.die();
@@ -549,15 +600,38 @@ export class Game {
 
     // Show score popup
     if (result.tile) {
-      this.renderer.renderGhostScore(
-        result.tile.col * 16 + 8,
-        result.tile.row * 16 + 8,
-        result.points
-      );
+      const x = result.tile.col * SCALED_TILE + SCALED_TILE / 2;
+      const y = result.tile.row * SCALED_TILE + SCALED_TILE / 2;
+
+      this.renderer.renderGhostScore(x, y, result.points);
+
+      // Particle explosion in ghost color
+      const ghostColorHex = result.ghost.color;
+      const ghostColor = this.hexToRGBA(ghostColorHex);
+      this.particles.emit(x, y, {
+        ...EffectPresets.GHOST_EAT,
+        color: ghostColor,
+      });
     }
+
+    // Screen shake for impact
+    this.effects.shake(ShakePresets.GHOST_EAT);
 
     // Brief pause
     this.pacman.frightenedModeActive = true;
+  }
+
+  /**
+   * Convert hex color to RGBA array
+   */
+  private hexToRGBA(hex: string): number[] {
+    const h = hex.replace('#', '');
+    return [
+      parseInt(h.substring(0, 2), 16) / 255,
+      parseInt(h.substring(2, 4), 16) / 255,
+      parseInt(h.substring(4, 6), 16) / 255,
+      1,
+    ];
   }
 
   /**
@@ -733,6 +807,26 @@ export class Game {
    * Render the current frame
    */
   private render(): void {
+    // Apply screen shake offset
+    const shakeOffset = this.effects.getShakeOffset();
+    const canvas = this.renderer.getCanvas();
+    if (shakeOffset.x !== 0 || shakeOffset.y !== 0) {
+      canvas.style.transform = `translate(${shakeOffset.x}px, ${shakeOffset.y}px)`;
+    } else {
+      canvas.style.transform = '';
+    }
+
+    // Apply flash overlay
+    const flashOverlay = document.getElementById('flash-overlay');
+    const flashColor = this.effects.getFlashColor();
+    const flashAlpha = this.effects.getFlashAlpha();
+    if (flashOverlay && flashColor && flashAlpha > 0) {
+      flashOverlay.style.backgroundColor = `rgba(${flashColor[0] * 255}, ${flashColor[1] * 255}, ${flashColor[2] * 255}, ${flashAlpha})`;
+      flashOverlay.classList.add('active');
+    } else if (flashOverlay) {
+      flashOverlay.classList.remove('active');
+    }
+
     // Clear screen
     this.renderer.clear();
 
@@ -769,6 +863,10 @@ export class Game {
         }
       }
     }
+
+    // Render particles on top
+    const particleData = this.particles.getRenderData();
+    this.renderer.renderParticles(particleData);
 
     // Flush rendering
     this.renderer.present();

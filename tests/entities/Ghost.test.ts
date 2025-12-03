@@ -8,14 +8,14 @@
  * - Clyde (Orange) - Shy
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { Blinky } from '../../src/entities/Blinky';
 import { Pinky } from '../../src/entities/Pinky';
 import { Inky } from '../../src/entities/Inky';
 import { Clyde } from '../../src/entities/Clyde';
 import { PacMan } from '../../src/entities/PacMan';
-import { Direction, GhostMode, SCALED_TILE } from '../../src/constants';
-import { START_POSITIONS, SCATTER_TARGETS } from '../../src/utils/MazeData';
+import { Direction, GhostMode } from '../../src/constants';
+import { SCATTER_TARGETS } from '../../src/utils/MazeData';
 
 describe('Blinky (Red Ghost)', () => {
   let blinky: Blinky;

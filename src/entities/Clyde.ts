@@ -39,7 +39,7 @@
 import { Ghost, GhostConfig } from './Ghost';
 import { TilePosition } from '../types';
 import { PacMan } from './PacMan';
-import { Colors, GhostMode } from '../constants';
+import { Colors } from '../constants';
 import { SCATTER_TARGETS, START_POSITIONS } from '../utils/MazeData';
 
 /**

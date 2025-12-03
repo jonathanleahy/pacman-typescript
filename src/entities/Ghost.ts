@@ -52,10 +52,9 @@ import {
   GHOST_EATEN_SPEED,
   GhostMode,
   GhostModeType,
-  Colors,
 } from '../constants';
 import { TilePosition } from '../types';
-import { MAZE_DATA, isWalkable, isInTunnel, isInGhostHouse, GHOST_HOUSE } from '../utils/MazeData';
+import { MAZE_DATA, isWalkable, isInTunnel, GHOST_HOUSE } from '../utils/MazeData';
 import { PacMan } from './PacMan';
 
 /**
@@ -508,7 +507,7 @@ export abstract class Ghost extends Entity {
    *
    * @param ctx - Canvas rendering context (or WebGL renderer interface)
    */
-  render(ctx: CanvasRenderingContext2D): void {
+  render(_ctx: CanvasRenderingContext2D): void {
     // Rendering is handled by the renderer system
     // This is here for interface compliance
   }

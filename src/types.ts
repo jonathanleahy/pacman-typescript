@@ -2,7 +2,7 @@
  * PAC-MAN Type Definitions
  */
 
-import { DirectionType, GhostModeType, GameStateType } from './constants';
+import { DirectionType, GhostModeType } from './constants';
 
 // 2D Position
 export interface Position {

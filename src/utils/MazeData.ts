@@ -91,7 +91,7 @@ export const SCATTER_TARGETS = {
  * Starting positions
  */
 export const START_POSITIONS = {
-  PACMAN: { col: 13.5, row: 23 },
+  PACMAN: { col: 13.5, row: 22 },  // Row 22 has empty space at center
   BLINKY: { col: 13.5, row: 11 },
   PINKY: { col: 13.5, row: 14 },
   INKY: { col: 11.5, row: 14 },

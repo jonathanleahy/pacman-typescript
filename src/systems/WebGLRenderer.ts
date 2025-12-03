@@ -27,7 +27,7 @@ import {
   Direction,
   GhostMode,
 } from '../constants';
-import { MAZE_DATA, GHOST_HOUSE } from '../utils/MazeData';
+import { MAZE_DATA } from '../utils/MazeData';
 import { TileType } from '../types';
 
 /**
@@ -110,18 +110,14 @@ const FRAGMENT_SHADER_SOURCE = `
   }
 `;
 
-/**
- * Sprite data structure for batch rendering
- * Each sprite is a quad (rectangle) defined by position, size, and color
- */
-interface SpriteData {
-  x: number;          // Center X position in pixels
-  y: number;          // Center Y position in pixels
-  width: number;      // Width in pixels
-  height: number;     // Height in pixels
-  color: number[];    // RGBA color (0-1 range)
-  rotation?: number;  // Optional rotation in radians
-}
+// Sprite data structure for batch rendering
+// Each sprite is a quad (rectangle) defined by position, size, and color
+// x: Center X position in pixels
+// y: Center Y position in pixels
+// width: Width in pixels
+// height: Height in pixels
+// color: RGBA color (0-1 range)
+// rotation: Optional rotation in radians
 
 /**
  * WebGL Renderer Class
@@ -529,10 +525,8 @@ export class WebGLRenderer {
     animFrame: number
   ): void {
     const halfSize = size / 2;
-    const top = y - halfSize;
     const bottom = y + halfSize;
     const left = x - halfSize;
-    const right = x + halfSize;
 
     // Draw rounded top as a semicircle
     const segments = 10;
@@ -561,7 +555,6 @@ export class WebGLRenderer {
     // Draw wavy bottom (3 bumps)
     const waveWidth = size / 3;
     const waveHeight = 4;
-    const waveOffset = (animFrame % 2) * 2;
 
     for (let i = 0; i < 3; i++) {
       const bumpX = left + waveWidth / 2 + i * waveWidth;
@@ -972,6 +965,26 @@ export class WebGLRenderer {
     document.getElementById('game-container')?.appendChild(popup);
 
     setTimeout(() => popup.remove(), 1000);
+  }
+
+  /**
+   * Render particles from a ParticleSystem
+   *
+   * Accepts render data from ParticleSystem.getRenderData()
+   * and adds it to the current batch.
+   */
+  renderParticles(renderData: { positions: number[]; colors: number[] }): void {
+    if (renderData.positions.length === 0) return;
+
+    // Add particle geometry directly to batch
+    this.vertices.push(...renderData.positions);
+    this.colors.push(...renderData.colors);
+
+    // Texture coords (not used but required)
+    const vertexCount = renderData.positions.length / 2;
+    for (let i = 0; i < vertexCount; i++) {
+      this.texCoords.push(0, 0);
+    }
   }
 
   /**

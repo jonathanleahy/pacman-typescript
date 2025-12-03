@@ -1,5 +1,27 @@
-/* PAC-MAN Classic Styling */
+/* PAC-MAN 2025 Visual Overhaul
+ *
+ * Modern neon aesthetic while respecting classic origins.
+ * Uses CSS animations, glow effects, and smooth transitions.
+ */
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+:root {
+  /* Neon color palette */
+  --neon-yellow: #ffff00;
+  --neon-yellow-glow: rgba(255, 255, 0, 0.8);
+  --neon-blue: #2121de;
+  --neon-blue-glow: rgba(33, 33, 222, 0.6);
+  --neon-cyan: #00ffff;
+  --neon-pink: #ffb8ff;
+  --neon-red: #ff0000;
+  --neon-orange: #ffb852;
+  --ghost-frightened: #2121de;
+
+  /* Timing */
+  --transition-fast: 0.15s;
+  --transition-medium: 0.3s;
+  --transition-slow: 0.5s;
+}
 
 * {
   margin: 0;
@@ -17,11 +39,319 @@ body {
   overflow: hidden;
 }
 
+/* ========================================
+   SPLASH SCREEN - 2025 Neon Aesthetic
+   ======================================== */
+
+#splash-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(ellipse at center, #0a0a20 0%, #000 70%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  transition: opacity var(--transition-slow) ease-out;
+}
+
+#splash-screen.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Particle canvas for splash background effects */
+#splash-particles {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+/* Floating ghost animations */
+.splash-background {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.floating-ghost {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border-radius: 50% 50% 0 0;
+  opacity: 0.3;
+  filter: blur(1px);
+}
+
+.floating-ghost::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 0;
+  width: 100%;
+  height: 12px;
+  background: inherit;
+  clip-path: polygon(0 0, 12% 100%, 25% 0, 38% 100%, 50% 0, 62% 100%, 75% 0, 88% 100%, 100% 0);
+}
+
+.ghost-red {
+  background: var(--neon-red);
+  box-shadow: 0 0 20px var(--neon-red);
+  top: 20%;
+  left: 10%;
+  animation: float-ghost 12s ease-in-out infinite;
+}
+
+.ghost-pink {
+  background: var(--neon-pink);
+  box-shadow: 0 0 20px var(--neon-pink);
+  top: 60%;
+  right: 15%;
+  animation: float-ghost 15s ease-in-out infinite reverse;
+  animation-delay: -3s;
+}
+
+.ghost-cyan {
+  background: var(--neon-cyan);
+  box-shadow: 0 0 20px var(--neon-cyan);
+  top: 40%;
+  left: 80%;
+  animation: float-ghost 10s ease-in-out infinite;
+  animation-delay: -5s;
+}
+
+.ghost-orange {
+  background: var(--neon-orange);
+  box-shadow: 0 0 20px var(--neon-orange);
+  bottom: 25%;
+  left: 20%;
+  animation: float-ghost 14s ease-in-out infinite reverse;
+  animation-delay: -7s;
+}
+
+@keyframes float-ghost {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate(50px, -30px) rotate(5deg);
+  }
+  50% {
+    transform: translate(100px, 0) rotate(0deg);
+  }
+  75% {
+    transform: translate(50px, 30px) rotate(-5deg);
+  }
+}
+
+/* Splash content container */
+.splash-content {
+  text-align: center;
+  z-index: 10;
+}
+
+/* Neon animated title */
+.neon-title {
+  font-size: 48px;
+  margin-bottom: 40px;
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+}
+
+.neon-title .letter {
+  color: var(--neon-yellow);
+  text-shadow:
+    0 0 5px var(--neon-yellow),
+    0 0 10px var(--neon-yellow),
+    0 0 20px var(--neon-yellow),
+    0 0 40px var(--neon-yellow-glow),
+    0 0 80px var(--neon-yellow-glow);
+  animation: neon-flicker 3s ease-in-out infinite,
+             letter-float 2s ease-in-out infinite;
+  animation-delay: calc(var(--i) * 0.1s);
+  display: inline-block;
+}
+
+@keyframes neon-flicker {
+  0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
+    text-shadow:
+      0 0 5px var(--neon-yellow),
+      0 0 10px var(--neon-yellow),
+      0 0 20px var(--neon-yellow),
+      0 0 40px var(--neon-yellow-glow),
+      0 0 80px var(--neon-yellow-glow);
+  }
+  20%, 24%, 55% {
+    text-shadow:
+      0 0 2px var(--neon-yellow),
+      0 0 5px var(--neon-yellow),
+      0 0 10px var(--neon-yellow-glow);
+  }
+}
+
+@keyframes letter-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+/* High score display on splash */
+.splash-high-score {
+  margin-bottom: 30px;
+}
+
+.splash-high-score .label {
+  display: block;
+  font-size: 12px;
+  color: var(--neon-red);
+  text-shadow: 0 0 10px var(--neon-red);
+  margin-bottom: 10px;
+}
+
+.splash-high-score .score-value {
+  font-size: 28px;
+  color: #fff;
+  text-shadow:
+    0 0 5px #fff,
+    0 0 10px #fff,
+    0 0 20px var(--neon-cyan),
+    0 0 40px var(--neon-cyan);
+  animation: score-pulse 2s ease-in-out infinite;
+}
+
+@keyframes score-pulse {
+  0%, 100% {
+    text-shadow:
+      0 0 5px #fff,
+      0 0 10px #fff,
+      0 0 20px var(--neon-cyan),
+      0 0 40px var(--neon-cyan);
+  }
+  50% {
+    text-shadow:
+      0 0 10px #fff,
+      0 0 20px #fff,
+      0 0 40px var(--neon-cyan),
+      0 0 80px var(--neon-cyan);
+  }
+}
+
+/* Animated Pac-Man on splash - chomping animation */
+.splash-pacman {
+  width: 60px;
+  height: 60px;
+  margin: 30px auto;
+  position: relative;
+}
+
+.splash-pacman::before,
+.splash-pacman::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 50%;
+  background: var(--neon-yellow);
+  left: 0;
+}
+
+.splash-pacman::before {
+  top: 0;
+  border-radius: 60px 60px 0 0;
+  transform-origin: bottom center;
+  animation: pacman-top 0.3s ease-in-out infinite;
+  box-shadow: 0 0 20px var(--neon-yellow), 0 0 40px var(--neon-yellow-glow);
+}
+
+.splash-pacman::after {
+  bottom: 0;
+  border-radius: 0 0 60px 60px;
+  transform-origin: top center;
+  animation: pacman-bottom 0.3s ease-in-out infinite;
+  box-shadow: 0 0 20px var(--neon-yellow), 0 0 40px var(--neon-yellow-glow);
+}
+
+@keyframes pacman-top {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-20deg); }
+}
+
+@keyframes pacman-bottom {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(20deg); }
+}
+
+/* Press Start text */
+.press-start {
+  font-size: 14px;
+  color: #fff;
+  margin-bottom: 40px;
+  animation: blink-text 1s ease-in-out infinite;
+}
+
+@keyframes blink-text {
+  0%, 49% {
+    opacity: 1;
+  }
+  50%, 100% {
+    opacity: 0.3;
+  }
+}
+
+/* Controls info */
+.splash-controls {
+  font-size: 10px;
+  color: var(--neon-cyan);
+  text-shadow: 0 0 10px var(--neon-cyan);
+}
+
+.splash-controls p {
+  margin-bottom: 8px;
+  opacity: 0.8;
+}
+
+/* ========================================
+   GAME CONTAINER - With Effects
+   ======================================== */
+
 #game-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   position: relative;
+  transition: opacity var(--transition-medium) ease-in;
+}
+
+#game-container.hidden {
+  display: none;
+}
+
+/* Flash overlay for screen effects */
+#flash-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 50;
+  transition: opacity 0.05s ease-out;
+}
+
+#flash-overlay.active {
+  opacity: 1;
 }
 
 #header {
@@ -56,10 +386,27 @@ body {
 }
 
 #game-canvas {
-  border: 4px solid #2121de;
+  border: 4px solid var(--neon-blue);
   background-color: #000;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
+  box-shadow:
+    0 0 10px var(--neon-blue-glow),
+    0 0 20px var(--neon-blue-glow),
+    inset 0 0 30px rgba(0, 0, 0, 0.5);
+  transition: filter var(--transition-fast) ease-out;
+}
+
+/* Apply screen shake via transform */
+#game-canvas.shaking {
+  animation: shake 0.1s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-2px, 2px); }
+  50% { transform: translate(2px, -2px); }
+  75% { transform: translate(-2px, -2px); }
 }
 
 #footer {
@@ -87,46 +434,39 @@ body {
   gap: 5px;
 }
 
-#start-screen {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
-  color: #ffff00;
-  z-index: 10;
+/* Score popup animation */
+.ghost-score-popup {
+  animation: score-float-up 1s ease-out forwards;
 }
 
-#start-screen h1 {
-  font-size: 32px;
-  margin-bottom: 30px;
-  text-shadow: 4px 4px #f00;
-  animation: pulse 1s ease-in-out infinite;
+@keyframes score-float-up {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-30px) scale(1.5);
+  }
 }
 
-#start-screen p {
-  font-size: 10px;
-  margin-bottom: 15px;
-  color: #fff;
+/* Power mode pulsing effect on game container */
+#game-container.power-mode #game-canvas {
+  animation: power-pulse 0.5s ease-in-out infinite;
 }
 
-#start-screen .controls {
-  margin-top: 30px;
-  font-size: 8px;
-  color: #0ff;
-}
-
-#start-screen .controls p {
-  margin-bottom: 8px;
-}
-
-#start-screen.hidden {
-  display: none;
-}
-
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
+@keyframes power-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 10px var(--neon-blue-glow),
+      0 0 20px var(--neon-blue-glow);
+  }
+  50% {
+    box-shadow:
+      0 0 15px var(--neon-cyan),
+      0 0 30px var(--neon-cyan),
+      0 0 45px rgba(0, 255, 255, 0.3);
+  }
 }
 
 /* Game Over Screen */

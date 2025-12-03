@@ -13,7 +13,7 @@ import {
   Direction,
   GhostMode,
 } from '../constants';
-import { MAZE_DATA, GHOST_HOUSE } from '../utils/MazeData';
+import { MAZE_DATA } from '../utils/MazeData';
 import { TileType } from '../types';
 
 export class Renderer {
@@ -376,12 +376,10 @@ export class Renderer {
     // Determine color based on mode
     let bodyColor = color;
     let eyeColor = '#fff';
-    let pupilColor = '#00f';
 
     if (mode === GhostMode.FRIGHTENED) {
       bodyColor = frightenedFlash ? Colors.FRIGHTENED_FLASH : Colors.FRIGHTENED;
       eyeColor = frightenedFlash ? '#f00' : '#ffb8de';
-      pupilColor = eyeColor;
     } else if (mode === GhostMode.EATEN) {
       // Only draw eyes when eaten
       this.renderGhostEyes(ctx, x, y, direction);

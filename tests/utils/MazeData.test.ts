@@ -95,7 +95,7 @@ describe('MazeData', () => {
   describe('start positions', () => {
     it('should have Pac-Man start position below center', () => {
       expect(START_POSITIONS.PACMAN.col).toBe(13.5);
-      expect(START_POSITIONS.PACMAN.row).toBe(23);
+      expect(START_POSITIONS.PACMAN.row).toBe(22); // Row 22 has empty space at center
     });
 
     it('should have Blinky start outside ghost house', () => {
