@@ -5,7 +5,7 @@
 
 // Display constants
 export const TILE_SIZE = 8;
-export const SCALE = 2;
+export const SCALE = 3;  // Increased from 2 for larger visuals
 export const SCALED_TILE = TILE_SIZE * SCALE;
 
 export const GRID_WIDTH = 28;

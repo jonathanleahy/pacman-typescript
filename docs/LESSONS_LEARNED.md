@@ -175,6 +175,30 @@ Pac-Man without "waka waka" isn't Pac-Man. Synthesized sounds match the retro ae
 
 ---
 
+## Evolution: From Faithful Recreation to Fresh Take
+
+**Initial goal**: Recreate the 1980 arcade experience as authentically as possible.
+
+**Why this was valuable**: Staying true to the original kept the project focused. The classic maze layout, ghost AI behaviors, and timing created the gameplay that made Pac-Man a legend. Without this foundation, we'd have just another maze game.
+
+**The pivot**: Once the authentic foundation was solid (190 tests, proper ghost AI, original timing), we had permission to evolve. The "2025 wow" graphics overhaul added:
+- GPU-accelerated particle effects
+- Neon glow aesthetic with animated splash screen
+- Screen shake and visual feedback
+- Larger visual scale (SCALE=3 instead of 2)
+
+**Key insight**: Times have changed. Players expect modern polish. The classic gameplay *is* the soul of Pac-Man, but the presentation can evolve. A faithful recreation was the right *starting point*, not the end goal.
+
+**Recommendation for future retro projects**:
+1. Build the authentic version first - respect the original
+2. Ensure tests lock in the core gameplay
+3. Then layer on modern visuals and polish
+4. The foundation ensures you're enhancing, not replacing
+
+*"Keep the soul, upgrade the skin."*
+
+---
+
 ## What I'd Do Differently
 
 1. **Draw the state machine diagram first**: Ghost modes got complex. A visual diagram would have helped.
