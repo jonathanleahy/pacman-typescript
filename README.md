@@ -7,6 +7,19 @@ A faithful recreation of the classic 1980 Namco arcade game, built with TypeScri
 ![WebGL](https://img.shields.io/badge/Rendering-WebGL-green)
 ![Tests](https://img.shields.io/badge/Tests-190%20passing-brightgreen)
 
+## 📸 Screenshots
+
+![Pac-Man Gameplay](docs/images/initial-commit-01.png)
+
+<details>
+<summary>More Screenshots</summary>
+
+![Screenshot 2](docs/images/initial-commit-02.png)
+
+![Screenshot 3](docs/images/initial-commit-03.png)
+
+</details>
+
 ## ✨ Features
 
 - **Authentic Gameplay**: Original 28×31 maze, ghost AI, and game mechanics

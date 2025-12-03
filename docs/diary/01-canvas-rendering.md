@@ -128,3 +128,9 @@ With rendering working, I need to actually have something to render. Next: the P
 **Tests written**: 21
 **Tests passing**: 21
 **Refactor iterations**: 3 (walls), 2 (mouth animation)
+
+---
+
+## Screenshot
+
+![Rendering system in action](../images/initial-commit-03.png)

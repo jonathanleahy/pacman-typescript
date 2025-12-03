@@ -191,3 +191,11 @@ If I continue this project:
 - **Tests passing**: 190
 - **Time to first playable build**: ~4 hours
 - **Cups of coffee**: Don't ask
+
+---
+
+## Screenshots
+
+![Game in action](../images/initial-commit-01.png)
+
+![Gameplay screenshot](../images/initial-commit-02.png)
