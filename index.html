@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PAC-MAN</title>
+  <link rel="stylesheet" href="/src/styles.css">
+</head>
+<body>
+  <div id="game-container">
+    <div id="header">
+      <div id="score-display">
+        <span class="label">1UP</span>
+        <span id="score">00</span>
+      </div>
+      <div id="high-score-display">
+        <span class="label">HIGH SCORE</span>
+        <span id="high-score">00</span>
+      </div>
+      <div id="score-2up">
+        <span class="label">2UP</span>
+        <span id="score-2">00</span>
+      </div>
+    </div>
+    <canvas id="game-canvas"></canvas>
+    <div id="footer">
+      <div id="lives-display"></div>
+      <div id="fruit-display"></div>
+    </div>
+    <div id="start-screen">
+      <h1>PAC-MAN</h1>
+      <p>Press SPACE or Click to Start</p>
+      <div class="controls">
+        <p>Arrow Keys or WASD to Move</p>
+        <p>P to Pause</p>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
