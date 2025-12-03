@@ -110,7 +110,16 @@ npm run test:coverage
 
 - [`docs/SPECIFICATION.md`](docs/SPECIFICATION.md) - Technical specification
 - [`docs/LESSONS_LEARNED.md`](docs/LESSONS_LEARNED.md) - Development insights
+- [`docs/AI_DEVELOPMENT_GUIDE.md`](docs/AI_DEVELOPMENT_GUIDE.md) - **AI/Claude instructions for adding features**
 - [`docs/diary/`](docs/diary/) - Build diary with decision rationale
+
+### For AI Assistants
+
+If you're using Claude or another AI to add features to this project, point it to:
+```
+docs/AI_DEVELOPMENT_GUIDE.md
+```
+This guide explains the TDD workflow, code patterns, and feature backlog.
 
 ## 🎯 Game Mechanics
 
