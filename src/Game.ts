@@ -885,7 +885,7 @@ export class Game {
     this.state = GameState.GAME_WON;
     this.sound.stopAll();
     this.sound.play(SoundType.VICTORY);
-    this.renderer.renderGameWonText();
+    this.renderer.renderGameWonText(this.score);
   }
 
   /**
