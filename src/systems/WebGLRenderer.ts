@@ -1168,43 +1168,95 @@ export class WebGLRenderer {
   }
 
   /**
-   * Render "YOU WIN!" text for completing all levels
+   * Render epic 2025 victory screen
    */
-  renderGameWonText(): void {
-    const existing = document.getElementById('gamewon-text');
+  renderGameWonText(score?: number): void {
+    const existing = document.getElementById('victory-overlay');
     if (!existing) {
-      const text = document.createElement('div');
-      text.id = 'gamewon-text';
-      text.style.cssText = `
-        position: absolute;
-        top: ${14 * SCALED_TILE}px;
-        left: 50%;
-        transform: translateX(-50%);
-        color: #00ff00;
-        font-family: 'Press Start 2P', monospace;
-        font-size: 24px;
-        z-index: 10;
-        text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00;
-        animation: pulse 1s ease-in-out infinite;
-      `;
-      text.textContent = 'YOU WIN!';
-      document.getElementById('game-container')?.appendChild(text);
+      const overlay = document.createElement('div');
+      overlay.id = 'victory-overlay';
 
-      // Add subtitle
-      const subtitle = document.createElement('div');
-      subtitle.id = 'gamewon-subtitle';
-      subtitle.style.cssText = `
-        position: absolute;
-        top: ${18 * SCALED_TILE}px;
-        left: 50%;
-        transform: translateX(-50%);
-        color: #ffff00;
-        font-family: 'Press Start 2P', monospace;
-        font-size: 12px;
-        z-index: 10;
-      `;
-      subtitle.textContent = 'PRESS SPACE TO PLAY AGAIN';
-      document.getElementById('game-container')?.appendChild(subtitle);
+      // Radial rays background
+      const rays = document.createElement('div');
+      rays.className = 'victory-rays';
+      overlay.appendChild(rays);
+
+      // Expanding rings
+      for (let i = 0; i < 3; i++) {
+        const ring = document.createElement('div');
+        ring.className = 'victory-ring';
+        ring.style.animationDelay = `${i * 0.6}s`;
+        overlay.appendChild(ring);
+      }
+
+      // Fireworks
+      const fireworkColors = ['#ff0000', '#ffff00', '#00ff00', '#00ffff', '#ff00ff', '#ff8800'];
+      for (let i = 0; i < 8; i++) {
+        const firework = document.createElement('div');
+        firework.className = 'firework';
+        firework.style.color = fireworkColors[i % fireworkColors.length];
+        firework.style.left = `${10 + Math.random() * 80}%`;
+        firework.style.top = `${10 + Math.random() * 80}%`;
+        firework.style.animationDelay = `${Math.random() * 2}s`;
+        overlay.appendChild(firework);
+      }
+
+      // Confetti
+      const confettiColors = ['#ff0000', '#ffff00', '#00ff00', '#00ffff', '#ff00ff', '#ff8800', '#ffffff'];
+      for (let i = 0; i < 30; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti';
+        confetti.style.background = confettiColors[i % confettiColors.length];
+        confetti.style.left = `${Math.random() * 100}%`;
+        confetti.style.animationDelay = `${Math.random() * 3}s`;
+        confetti.style.animationDuration = `${2 + Math.random() * 2}s`;
+        const shapes = ['50%', '0%', '50% 0 50% 50%'];
+        confetti.style.borderRadius = shapes[Math.floor(Math.random() * shapes.length)];
+        overlay.appendChild(confetti);
+      }
+
+      // Victory title with animated letters
+      const title = document.createElement('div');
+      title.className = 'victory-title';
+      const titleText = 'VICTORY!';
+      titleText.split('').forEach((char, i) => {
+        const letter = document.createElement('span');
+        letter.className = 'letter';
+        letter.style.setProperty('--i', i.toString());
+        letter.textContent = char;
+        title.appendChild(letter);
+      });
+      overlay.appendChild(title);
+
+      // 2025 Edition badge
+      const badge = document.createElement('div');
+      badge.className = 'victory-badge';
+      badge.textContent = '2025 EDITION';
+      overlay.appendChild(badge);
+
+      // Pac-Man celebration
+      const pacman = document.createElement('div');
+      pacman.className = 'victory-pacman';
+      overlay.appendChild(pacman);
+
+      // Score display
+      if (score !== undefined) {
+        const scoreDisplay = document.createElement('div');
+        scoreDisplay.className = 'victory-score';
+        scoreDisplay.innerHTML = `
+          <span class="label">FINAL SCORE</span>
+          <span class="value">${score.toLocaleString()}</span>
+        `;
+        overlay.appendChild(scoreDisplay);
+      }
+
+      // Play again prompt
+      const prompt = document.createElement('div');
+      prompt.className = 'victory-prompt';
+      prompt.textContent = 'PRESS SPACE TO PLAY AGAIN';
+      overlay.appendChild(prompt);
+
+      document.body.appendChild(overlay);
     }
   }
 
@@ -1212,6 +1264,9 @@ export class WebGLRenderer {
    * Clear game won text
    */
   clearGameWonText(): void {
+    const overlay = document.getElementById('victory-overlay');
+    if (overlay) overlay.remove();
+    // Also clear old-style elements if they exist
     const text = document.getElementById('gamewon-text');
     const subtitle = document.getElementById('gamewon-subtitle');
     if (text) text.remove();
@@ -1219,9 +1274,95 @@ export class WebGLRenderer {
   }
 
   /**
-   * Render intermission screen
+   * Trigger maze flash animation on level complete
    */
-  renderIntermission(title: string, message: string, progress: number): void {
+  flashMaze(): void {
+    this.canvas.classList.add('level-complete');
+    setTimeout(() => {
+      this.canvas.classList.remove('level-complete');
+    }, 800); // 4 flashes at 0.2s each
+  }
+
+  /**
+   * Update level indicator display
+   */
+  renderLevel(level: number): void {
+    const levelEl = document.getElementById('level');
+    if (levelEl) {
+      levelEl.textContent = level.toString();
+    }
+  }
+
+  /**
+   * Add fruit to history display
+   */
+  addFruitToHistory(fruitType: number): void {
+    const fruitHistory = document.getElementById('fruit-history');
+    if (!fruitHistory) return;
+
+    // Max 7 fruits shown
+    const icons = fruitHistory.querySelectorAll('.fruit-icon');
+    if (icons.length >= 7) {
+      icons[0].remove();
+    }
+
+    const icon = document.createElement('div');
+    icon.className = 'fruit-icon';
+
+    // Fruit colors based on type
+    const fruitColors = [
+      '#ff0000', // Cherry
+      '#ff6666', // Strawberry
+      '#ff8800', // Orange
+      '#ff0000', // Apple
+      '#00ff00', // Melon
+      '#00ffff', // Galaxian
+      '#ffff00', // Bell
+      '#ffffff', // Key
+    ];
+
+    icon.style.backgroundColor = fruitColors[fruitType] || '#ff0000';
+    icon.style.color = fruitColors[fruitType] || '#ff0000';
+    fruitHistory.appendChild(icon);
+  }
+
+  /**
+   * Clear fruit history (on new game)
+   */
+  clearFruitHistory(): void {
+    const fruitHistory = document.getElementById('fruit-history');
+    if (fruitHistory) {
+      fruitHistory.innerHTML = '';
+    }
+  }
+
+  /**
+   * Flash high score when beaten
+   */
+  flashHighScore(isNew: boolean): void {
+    const highScoreEl = document.getElementById('high-score');
+    if (highScoreEl) {
+      if (isNew) {
+        highScoreEl.classList.add('new-high');
+      } else {
+        highScoreEl.classList.remove('new-high');
+      }
+    }
+  }
+
+  /**
+   * Render intermission screen with animated cutscene
+   */
+  renderIntermission(title: string, message: string, progress: number, sprites?: Array<{
+    x: number;
+    y: number;
+    type: 'pacman' | 'ghost' | 'bigpacman';
+    color?: string;
+    direction: number;
+    scale: number;
+    frightened?: boolean;
+    animFrame: number;
+  }>): void {
     let container = document.getElementById('intermission-container');
     if (!container) {
       container = document.createElement('div');
@@ -1234,39 +1375,57 @@ export class WebGLRenderer {
         height: 100%;
         display: flex;
         flex-direction: column;
-        justify-content: center;
+        justify-content: flex-start;
         align-items: center;
-        background: rgba(0, 0, 0, 0.9);
+        background: #000;
         z-index: 100;
+        overflow: hidden;
       `;
 
+      // Title at top
       const titleEl = document.createElement('div');
       titleEl.id = 'intermission-title';
       titleEl.style.cssText = `
         color: #00ffff;
         font-family: 'Press Start 2P', monospace;
         font-size: 32px;
-        margin-bottom: 20px;
-        text-shadow: 0 0 10px #00ffff;
+        margin-top: 60px;
+        margin-bottom: 10px;
+        text-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff;
       `;
       container.appendChild(titleEl);
 
+      // Message below title
       const messageEl = document.createElement('div');
       messageEl.id = 'intermission-message';
       messageEl.style.cssText = `
         color: #ffff00;
         font-family: 'Press Start 2P', monospace;
         font-size: 16px;
-        margin-bottom: 40px;
+        margin-bottom: 20px;
+        text-shadow: 0 0 10px #ffff00;
       `;
       container.appendChild(messageEl);
 
+      // Canvas for animated sprites
+      const cutsceneCanvas = document.createElement('canvas');
+      cutsceneCanvas.id = 'cutscene-canvas';
+      cutsceneCanvas.width = 672;
+      cutsceneCanvas.height = 400;
+      cutsceneCanvas.style.cssText = `
+        margin-top: 20px;
+      `;
+      container.appendChild(cutsceneCanvas);
+
+      // Skip text at bottom
       const skipEl = document.createElement('div');
       skipEl.id = 'intermission-skip';
       skipEl.style.cssText = `
-        color: #888888;
+        color: #666666;
         font-family: 'Press Start 2P', monospace;
         font-size: 10px;
+        margin-top: auto;
+        margin-bottom: 40px;
       `;
       skipEl.textContent = 'PRESS ANY KEY TO SKIP';
       container.appendChild(skipEl);
@@ -1280,6 +1439,19 @@ export class WebGLRenderer {
     if (titleEl) titleEl.textContent = title;
     if (messageEl) messageEl.textContent = message;
 
+    // Render animated sprites on cutscene canvas
+    const cutsceneCanvas = document.getElementById('cutscene-canvas') as HTMLCanvasElement;
+    if (cutsceneCanvas && sprites) {
+      const ctx = cutsceneCanvas.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, cutsceneCanvas.width, cutsceneCanvas.height);
+
+        for (const sprite of sprites) {
+          this.renderCutsceneSprite(ctx, sprite);
+        }
+      }
+    }
+
     // Fade effect based on progress
     if (progress < 0.1) {
       container.style.opacity = String(progress * 10);
@@ -1288,6 +1460,138 @@ export class WebGLRenderer {
     } else {
       container.style.opacity = '1';
     }
+  }
+
+  /**
+   * Render a single cutscene sprite on canvas
+   */
+  private renderCutsceneSprite(ctx: CanvasRenderingContext2D, sprite: {
+    x: number;
+    y: number;
+    type: 'pacman' | 'ghost' | 'bigpacman';
+    color?: string;
+    direction: number;
+    scale: number;
+    frightened?: boolean;
+    animFrame: number;
+  }): void {
+    ctx.save();
+    ctx.translate(sprite.x, sprite.y);
+
+    const baseSize = 24 * sprite.scale;
+
+    if (sprite.type === 'pacman' || sprite.type === 'bigpacman') {
+      // Draw Pac-Man
+      ctx.fillStyle = '#ffff00';
+
+      const mouthOpenings = [0, 0.15, 0.35, 0.15];
+      const mouthAngle = Math.PI * mouthOpenings[sprite.animFrame % 4];
+
+      let startAngle: number, endAngle: number;
+
+      switch (sprite.direction) {
+        case 3: // RIGHT
+          startAngle = mouthAngle;
+          endAngle = Math.PI * 2 - mouthAngle;
+          break;
+        case 2: // LEFT
+          startAngle = Math.PI + mouthAngle;
+          endAngle = Math.PI - mouthAngle;
+          break;
+        case 0: // UP
+          startAngle = -Math.PI / 2 + mouthAngle;
+          endAngle = -Math.PI / 2 - mouthAngle + Math.PI * 2;
+          break;
+        case 1: // DOWN
+          startAngle = Math.PI / 2 + mouthAngle;
+          endAngle = Math.PI / 2 - mouthAngle + Math.PI * 2;
+          break;
+        default:
+          startAngle = mouthAngle;
+          endAngle = Math.PI * 2 - mouthAngle;
+      }
+
+      ctx.beginPath();
+      ctx.arc(0, 0, baseSize / 2, startAngle, endAngle);
+      ctx.lineTo(0, 0);
+      ctx.closePath();
+      ctx.fill();
+
+      // Add glow
+      ctx.shadowColor = '#ffff00';
+      ctx.shadowBlur = 15 * sprite.scale;
+      ctx.fill();
+    } else {
+      // Draw Ghost
+      const ghostColor = sprite.frightened ? '#2121de' : (sprite.color || '#ff0000');
+      ctx.fillStyle = ghostColor;
+
+      const radius = baseSize / 2;
+      const waveOffset = (sprite.animFrame % 2) * 3;
+
+      // Ghost body (rounded top)
+      ctx.beginPath();
+      ctx.arc(0, -radius / 4, radius, Math.PI, 0, false);
+
+      // Wavy bottom
+      const waveCount = 3;
+      const waveWidth = (radius * 2) / waveCount;
+      const waveHeight = radius / 3;
+
+      ctx.lineTo(radius, radius / 2);
+      for (let i = waveCount; i > 0; i--) {
+        const wx = radius - (waveCount - i + 0.5) * waveWidth;
+        const wy = radius / 2 + ((i + waveOffset) % 2 === 0 ? waveHeight : 0);
+        ctx.lineTo(wx, wy);
+      }
+      ctx.lineTo(-radius, radius / 2);
+      ctx.closePath();
+      ctx.fill();
+
+      // Add glow
+      ctx.shadowColor = ghostColor;
+      ctx.shadowBlur = 10 * sprite.scale;
+      ctx.fill();
+
+      // Eyes
+      ctx.shadowBlur = 0;
+      const eyeRadius = radius / 4;
+      const eyeY = -radius / 4;
+      const pupilRadius = eyeRadius / 2;
+
+      // Frightened mode - different eyes
+      if (sprite.frightened) {
+        ctx.fillStyle = '#ffffff';
+        // Worried expression - small dots
+        ctx.beginPath();
+        ctx.arc(-radius / 3, eyeY, eyeRadius / 2, 0, Math.PI * 2);
+        ctx.arc(radius / 3, eyeY, eyeRadius / 2, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        // Normal eyes - white with pupils
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(-radius / 3, eyeY, eyeRadius, 0, Math.PI * 2);
+        ctx.arc(radius / 3, eyeY, eyeRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Pupils - direction based
+        ctx.fillStyle = '#0000ff';
+        let pupilOffsetX = 0, pupilOffsetY = 0;
+        switch (sprite.direction) {
+          case 2: pupilOffsetX = -pupilRadius / 2; break; // LEFT
+          case 3: pupilOffsetX = pupilRadius / 2; break; // RIGHT
+          case 0: pupilOffsetY = -pupilRadius / 2; break; // UP
+          case 1: pupilOffsetY = pupilRadius / 2; break; // DOWN
+        }
+        ctx.beginPath();
+        ctx.arc(-radius / 3 + pupilOffsetX, eyeY + pupilOffsetY, pupilRadius, 0, Math.PI * 2);
+        ctx.arc(radius / 3 + pupilOffsetX, eyeY + pupilOffsetY, pupilRadius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    ctx.restore();
   }
 
   /**

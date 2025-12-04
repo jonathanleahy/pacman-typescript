@@ -325,6 +325,31 @@ export class Game {
     if (queuedDir !== Direction.NONE) {
       this.pacman.setDirection(queuedDir);
     }
+
+    // Check for cheat code activation
+    if (this.input.isCheatActivated() && this.state === GameState.PLAYING) {
+      this.activateSkipCheat();
+    }
+  }
+
+  /**
+   * Activate skip to end of level cheat
+   */
+  private activateSkipCheat(): void {
+    const remaining = this.collision.skipToEndOfLevel();
+
+    // Update renderer to clear eaten pellets
+    for (let row = 0; row < 31; row++) {
+      for (let col = 0; col < 28; col++) {
+        const isRemaining = remaining.some(p => p.col === col && p.row === row);
+        if (!isRemaining && !this.collision.hasPellet(col, row)) {
+          this.renderer.eatPellet(col, row);
+        }
+      }
+    }
+
+    // Play a sound to confirm cheat
+    this.sound.play(SoundType.EXTRA_LIFE);
   }
 
   /**
@@ -433,6 +458,9 @@ export class Game {
 
     // Release more ghosts based on pellets eaten
     this.checkGhostRelease();
+
+    // Update Blinky's Elroy mode
+    this.blinky.updateElroyMode(this.collision.getPelletsRemaining(), this.level);
   }
 
   /**
@@ -661,6 +689,9 @@ export class Game {
         this.fruit.position.y,
         points
       );
+
+      // Add to fruit history
+      this.renderer.addFruitToHistory(this.fruit.type);
     }
   }
 
@@ -853,7 +884,8 @@ export class Game {
   private gameWon(): void {
     this.state = GameState.GAME_WON;
     this.sound.stopAll();
-    this.renderer.renderGameWonText();
+    this.sound.play(SoundType.VICTORY);
+    this.renderer.renderGameWonText(this.score);
   }
 
   /**
@@ -864,8 +896,10 @@ export class Game {
     this.stateTimer = 120; // 2 seconds
 
     this.sound.stopAll();
+    this.sound.play(SoundType.LEVEL_COMPLETE);
 
-    // Flash maze animation could go here
+    // Flash maze animation
+    this.renderer.flashMaze();
   }
 
   /**
@@ -940,6 +974,9 @@ export class Game {
     // Clear game over/won text
     this.renderer.clearGameOverText();
     this.renderer.clearGameWonText();
+    this.renderer.clearFruitHistory();
+    this.renderer.flashHighScore(false);
+    this.highScoreFlashing = false;
 
     // Reset game state
     this.score = 0;
@@ -979,6 +1016,9 @@ export class Game {
     }
   }
 
+  /** Track if we've started flashing high score */
+  private highScoreFlashing: boolean = false;
+
   /**
    * Add to score
    */
@@ -990,6 +1030,15 @@ export class Game {
       this.extraLifeAwarded = true;
       this.pacman.lives++;
       this.sound.play(SoundType.EXTRA_LIFE);
+    }
+
+    // Check for new high score
+    if (this.score > this.highScore) {
+      this.highScore = this.score;
+      if (!this.highScoreFlashing) {
+        this.highScoreFlashing = true;
+        this.renderer.flashHighScore(true);
+      }
     }
   }
 
@@ -1077,11 +1126,13 @@ export class Game {
     // Update UI
     this.renderer.renderScore(this.score, this.highScore);
     this.renderer.renderLives(this.pacman.lives);
+    this.renderer.renderLevel(this.level);
 
     // Render intermission overlay if active
     if (this.state === GameState.INTERMISSION) {
       const desc = this.intermission.getSceneDescription();
-      this.renderer.renderIntermission(desc.title, desc.message, this.intermission.getProgress());
+      const sprites = this.intermission.getSprites();
+      this.renderer.renderIntermission(desc.title, desc.message, this.intermission.getProgress(), sprites);
     } else {
       this.renderer.clearIntermission();
     }
