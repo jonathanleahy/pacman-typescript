@@ -180,6 +180,46 @@ export class WebGLRenderer {
   /** Timer for power pellet blinking */
   private powerPelletTimer: number = 0;
 
+  /** Current game level for theming */
+  private currentLevel: number = 1;
+
+  /** Level theme configurations */
+  private readonly levelThemes = {
+    // Level 1: Classic Blue - The original arcade look
+    1: {
+      name: 'Classic Blue',
+      wallColor: [0.13, 0.13, 0.87, 1.0],      // #2121de
+      wallGlow: [0.15, 0.15, 0.55, 1.0],
+      wallHighlight: [0.4, 0.4, 1.0, 1.0],
+      floorColor1: [0.02, 0.02, 0.05, 1.0],
+      floorColor2: [0.04, 0.04, 0.08, 1.0],
+      doorColor: [1.0, 0.72, 0.87, 1.0],       // Pink
+      doorGlow: [0.6, 0.45, 0.55, 0.5],
+    },
+    // Level 2: Neon Green - Cyber/Matrix theme
+    2: {
+      name: 'Neon Green',
+      wallColor: [0.0, 0.8, 0.2, 1.0],         // Bright green
+      wallGlow: [0.0, 0.4, 0.1, 1.0],
+      wallHighlight: [0.4, 1.0, 0.5, 1.0],
+      floorColor1: [0.01, 0.04, 0.02, 1.0],
+      floorColor2: [0.02, 0.06, 0.03, 1.0],
+      doorColor: [0.8, 1.0, 0.2, 1.0],         // Yellow-green
+      doorGlow: [0.4, 0.6, 0.1, 0.5],
+    },
+    // Level 3: Crimson Red - Danger zone
+    3: {
+      name: 'Crimson Red',
+      wallColor: [0.85, 0.1, 0.15, 1.0],       // Deep red
+      wallGlow: [0.5, 0.05, 0.1, 1.0],
+      wallHighlight: [1.0, 0.4, 0.4, 1.0],
+      floorColor1: [0.05, 0.01, 0.01, 1.0],
+      floorColor2: [0.08, 0.02, 0.02, 1.0],
+      doorColor: [1.0, 0.6, 0.2, 1.0],         // Orange
+      doorGlow: [0.6, 0.3, 0.1, 0.5],
+    },
+  } as const;
+
   /**
    * Constructor - Initialize WebGL context and shaders
    *
@@ -339,6 +379,23 @@ export class WebGLRenderer {
         this.pelletState[row][col] = tile === TileType.PELLET || tile === TileType.POWER_PELLET;
       }
     }
+  }
+
+  /**
+   * Set the current level for theming
+   * @param level - Current game level (1-based)
+   */
+  setLevel(level: number): void {
+    this.currentLevel = level;
+  }
+
+  /**
+   * Get the current level's theme, cycling through themes for levels > 3
+   */
+  private getTheme() {
+    // Cycle through themes: 1->1, 2->2, 3->3, 4->1, 5->2, 6->3, etc.
+    const themeIndex = ((this.currentLevel - 1) % 3) + 1;
+    return this.levelThemes[themeIndex as 1 | 2 | 3];
   }
 
   /**
@@ -648,19 +705,50 @@ export class WebGLRenderer {
   }
 
   /**
-   * Render the maze walls with glow effect
+   * Render the floor with subtle grid pattern based on current theme
+   */
+  renderFloor(): void {
+    const theme = this.getTheme();
+    const floorColor = [...theme.floorColor1];
+    const gridColor = [...theme.floorColor2];
+
+    // Draw floor tiles with alternating pattern
+    for (let row = 0; row < GRID_HEIGHT; row++) {
+      for (let col = 0; col < GRID_WIDTH; col++) {
+        const tile = MAZE_DATA[row]?.[col];
+        // Only draw floor for walkable areas
+        if (tile !== TileType.WALL) {
+          const x = col * SCALED_TILE + SCALED_TILE / 2;
+          const y = row * SCALED_TILE + SCALED_TILE / 2;
+          const color = (row + col) % 2 === 0 ? floorColor : gridColor;
+          this.addRect(x, y, SCALED_TILE, SCALED_TILE, color);
+        }
+      }
+    }
+  }
+
+  /**
+   * Render the maze walls
    *
-   * The maze is drawn as a series of connected lines forming the
-   * iconic Pac-Man maze pattern, with a neon glow effect.
+   * The maze is drawn with thick, glowing walls in the iconic Pac-Man style.
+   * Walls have a main color with a lighter inner edge for depth.
+   * Colors are based on the current level's theme.
    */
   renderMaze(): void {
-    const wallColor = this.hexToRGBA(this.currentMazeColor);
-    // Glow layer - very subtle
-    const glowColor = [wallColor[0], wallColor[1], wallColor[2], 0.1];
-    const lineWidth = 2;
-    const glowWidth = 4;
+    // First render the floor
+    this.renderFloor();
 
-    // First pass: Draw glow layer (underneath)
+    // Get theme colors for current level
+    const theme = this.getTheme();
+    const wallColor = [...theme.wallColor];
+    const wallGlow = [...theme.wallGlow];
+    const wallHighlight = [...theme.wallHighlight];
+    const doorColor = [...theme.doorColor];
+    const doorGlow = [...theme.doorGlow];
+    const lineWidth = 4;  // Thicker walls
+    const glowWidth = 8;  // Glow around walls
+
+    // First pass: Draw glow layer
     for (let row = 0; row < GRID_HEIGHT; row++) {
       for (let col = 0; col < GRID_WIDTH; col++) {
         const tile = MAZE_DATA[row]?.[col];
@@ -676,23 +764,24 @@ export class WebGLRenderer {
 
           // Draw glow connections
           if (hasTop) {
-            this.addRect(x, y - SCALED_TILE / 4, glowWidth, SCALED_TILE / 2, glowColor);
+            this.addRect(x, y - SCALED_TILE / 4, glowWidth, SCALED_TILE / 2 + 2, wallGlow);
           }
           if (hasBottom) {
-            this.addRect(x, y + SCALED_TILE / 4, glowWidth, SCALED_TILE / 2, glowColor);
+            this.addRect(x, y + SCALED_TILE / 4, glowWidth, SCALED_TILE / 2 + 2, wallGlow);
           }
           if (hasLeft) {
-            this.addRect(x - SCALED_TILE / 4, y, SCALED_TILE / 2, glowWidth, glowColor);
+            this.addRect(x - SCALED_TILE / 4, y, SCALED_TILE / 2 + 2, glowWidth, wallGlow);
           }
           if (hasRight) {
-            this.addRect(x + SCALED_TILE / 4, y, SCALED_TILE / 2, glowWidth, glowColor);
+            this.addRect(x + SCALED_TILE / 4, y, SCALED_TILE / 2 + 2, glowWidth, wallGlow);
           }
-          this.addCircle(x, y, glowWidth / 2, glowColor, 6);
+          // Glow center
+          this.addCircle(x, y, glowWidth / 2, wallGlow, 8);
         }
       }
     }
 
-    // Second pass: Draw solid walls (on top)
+    // Second pass: Draw main wall lines
     for (let row = 0; row < GRID_HEIGHT; row++) {
       for (let col = 0; col < GRID_WIDTH; col++) {
         const tile = MAZE_DATA[row]?.[col];
@@ -706,7 +795,7 @@ export class WebGLRenderer {
           const hasLeft = this.isWall(col - 1, row);
           const hasRight = this.isWall(col + 1, row);
 
-          // Draw connecting lines
+          // Draw solid wall connections
           if (hasTop) {
             this.addRect(x, y - SCALED_TILE / 4, lineWidth, SCALED_TILE / 2, wallColor);
           }
@@ -720,16 +809,47 @@ export class WebGLRenderer {
             this.addRect(x + SCALED_TILE / 4, y, SCALED_TILE / 2, lineWidth, wallColor);
           }
 
-          // Draw center point
-          this.addCircle(x, y, lineWidth, wallColor, 6);
+          // Draw rounded corner/junction
+          this.addCircle(x, y, lineWidth / 2, wallColor, 8);
         } else if (tile === TileType.GHOST_DOOR) {
-          // Ghost house door (pink with glow)
+          // Ghost house door with glow (themed)
           const x = col * SCALED_TILE + SCALED_TILE / 2;
           const y = row * SCALED_TILE + SCALED_TILE / 2;
-          const doorColor = this.hexToRGBA('#ffb8de');
-          const doorGlow = [doorColor[0], doorColor[1], doorColor[2], 0.3];
-          this.addRect(x, y, SCALED_TILE + 4, 8, doorGlow);
+          // Glow
+          this.addRect(x, y, SCALED_TILE + 2, 8, doorGlow);
+          // Door
           this.addRect(x, y, SCALED_TILE, 4, doorColor);
+        }
+      }
+    }
+
+    // Third pass: Draw inner highlights for 3D effect
+    for (let row = 0; row < GRID_HEIGHT; row++) {
+      for (let col = 0; col < GRID_WIDTH; col++) {
+        const tile = MAZE_DATA[row]?.[col];
+
+        if (tile === TileType.WALL) {
+          const x = col * SCALED_TILE + SCALED_TILE / 2;
+          const y = row * SCALED_TILE + SCALED_TILE / 2;
+
+          const hasTop = this.isWall(col, row - 1);
+          const hasBottom = this.isWall(col, row + 1);
+          const hasLeft = this.isWall(col - 1, row);
+          const hasRight = this.isWall(col + 1, row);
+
+          // Draw thin highlight on top/left edges
+          if (hasTop) {
+            this.addRect(x - 1, y - SCALED_TILE / 4, 1, SCALED_TILE / 2, wallHighlight);
+          }
+          if (hasBottom) {
+            this.addRect(x - 1, y + SCALED_TILE / 4, 1, SCALED_TILE / 2, wallHighlight);
+          }
+          if (hasLeft) {
+            this.addRect(x - SCALED_TILE / 4, y - 1, SCALED_TILE / 2, 1, wallHighlight);
+          }
+          if (hasRight) {
+            this.addRect(x + SCALED_TILE / 4, y - 1, SCALED_TILE / 2, 1, wallHighlight);
+          }
         }
       }
     }
@@ -1092,16 +1212,6 @@ export class WebGLRenderer {
 
     setTimeout(() => popup.remove(), 1500);
   }
-
-  /**
-   * Set maze wall color (for level progression)
-   */
-  setMazeColor(color: string): void {
-    // Update the maze color constant for re-rendering
-    this.currentMazeColor = color;
-  }
-
-  private currentMazeColor: string = '#2121de';
 
   /**
    * Render particles from a ParticleSystem

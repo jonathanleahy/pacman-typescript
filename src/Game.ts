@@ -777,9 +777,8 @@ export class Game {
     this.firstFruitSpawned = false;
     this.secondFruitSpawned = false;
 
-    // Apply level-specific settings
-    const config = getLevelConfig(this.level);
-    this.renderer.setMazeColor(config.mazeColor);
+    // Apply level-specific settings (colors handled by theme system)
+    getLevelConfig(this.level);
 
     // Reset pellets
     this.collision.resetPellets();
@@ -916,6 +915,9 @@ export class Game {
 
     // Clear screen
     this.renderer.clear();
+
+    // Set level for theming
+    this.renderer.setLevel(this.level);
 
     // Render maze
     this.renderer.renderMaze();
