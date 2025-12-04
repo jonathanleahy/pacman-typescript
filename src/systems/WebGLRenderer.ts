@@ -1168,6 +1168,137 @@ export class WebGLRenderer {
   }
 
   /**
+   * Render "YOU WIN!" text for completing all levels
+   */
+  renderGameWonText(): void {
+    const existing = document.getElementById('gamewon-text');
+    if (!existing) {
+      const text = document.createElement('div');
+      text.id = 'gamewon-text';
+      text.style.cssText = `
+        position: absolute;
+        top: ${14 * SCALED_TILE}px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: #00ff00;
+        font-family: 'Press Start 2P', monospace;
+        font-size: 24px;
+        z-index: 10;
+        text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00;
+        animation: pulse 1s ease-in-out infinite;
+      `;
+      text.textContent = 'YOU WIN!';
+      document.getElementById('game-container')?.appendChild(text);
+
+      // Add subtitle
+      const subtitle = document.createElement('div');
+      subtitle.id = 'gamewon-subtitle';
+      subtitle.style.cssText = `
+        position: absolute;
+        top: ${18 * SCALED_TILE}px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: #ffff00;
+        font-family: 'Press Start 2P', monospace;
+        font-size: 12px;
+        z-index: 10;
+      `;
+      subtitle.textContent = 'PRESS SPACE TO PLAY AGAIN';
+      document.getElementById('game-container')?.appendChild(subtitle);
+    }
+  }
+
+  /**
+   * Clear game won text
+   */
+  clearGameWonText(): void {
+    const text = document.getElementById('gamewon-text');
+    const subtitle = document.getElementById('gamewon-subtitle');
+    if (text) text.remove();
+    if (subtitle) subtitle.remove();
+  }
+
+  /**
+   * Render intermission screen
+   */
+  renderIntermission(title: string, message: string, progress: number): void {
+    let container = document.getElementById('intermission-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'intermission-container';
+      container.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        background: rgba(0, 0, 0, 0.9);
+        z-index: 100;
+      `;
+
+      const titleEl = document.createElement('div');
+      titleEl.id = 'intermission-title';
+      titleEl.style.cssText = `
+        color: #00ffff;
+        font-family: 'Press Start 2P', monospace;
+        font-size: 32px;
+        margin-bottom: 20px;
+        text-shadow: 0 0 10px #00ffff;
+      `;
+      container.appendChild(titleEl);
+
+      const messageEl = document.createElement('div');
+      messageEl.id = 'intermission-message';
+      messageEl.style.cssText = `
+        color: #ffff00;
+        font-family: 'Press Start 2P', monospace;
+        font-size: 16px;
+        margin-bottom: 40px;
+      `;
+      container.appendChild(messageEl);
+
+      const skipEl = document.createElement('div');
+      skipEl.id = 'intermission-skip';
+      skipEl.style.cssText = `
+        color: #888888;
+        font-family: 'Press Start 2P', monospace;
+        font-size: 10px;
+      `;
+      skipEl.textContent = 'PRESS ANY KEY TO SKIP';
+      container.appendChild(skipEl);
+
+      document.getElementById('game-container')?.appendChild(container);
+    }
+
+    // Update content
+    const titleEl = document.getElementById('intermission-title');
+    const messageEl = document.getElementById('intermission-message');
+    if (titleEl) titleEl.textContent = title;
+    if (messageEl) messageEl.textContent = message;
+
+    // Fade effect based on progress
+    if (progress < 0.1) {
+      container.style.opacity = String(progress * 10);
+    } else if (progress > 0.9) {
+      container.style.opacity = String((1 - progress) * 10);
+    } else {
+      container.style.opacity = '1';
+    }
+  }
+
+  /**
+   * Clear intermission screen
+   */
+  clearIntermission(): void {
+    const container = document.getElementById('intermission-container');
+    if (container) container.remove();
+  }
+
+  /**
    * Render ghost score popup
    */
   renderGhostScore(x: number, y: number, score: number): void {

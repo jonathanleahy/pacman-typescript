@@ -51,6 +51,7 @@ import { Inky } from './entities/Inky';
 import { Clyde } from './entities/Clyde';
 import { Fruit } from './entities/Fruit';
 import { getLevelConfig, FRUIT_SPAWN_PELLETS } from './systems/LevelConfig';
+import { Intermission } from './systems/Intermission';
 import {
   GameState,
   GameStateType,
@@ -162,6 +163,9 @@ export class Game {
   /** Track if second fruit has spawned this level */
   private secondFruitSpawned: boolean = false;
 
+  /** Intermission system for cutscenes */
+  private intermission: Intermission;
+
   /**
    * Create a new game instance
    */
@@ -175,6 +179,7 @@ export class Game {
     // Initialize 2025 visual effects systems
     this.particles = new ParticleSystem(1000); // Up to 1000 particles
     this.effects = new PostProcessingManager();
+    this.intermission = new Intermission();
 
     // Initialize entities
     this.pacman = new PacMan();
@@ -309,8 +314,8 @@ export class Game {
       return;
     }
 
-    // Handle game over - restart
-    if (this.state === GameState.GAME_OVER && this.input.isStartPressed()) {
+    // Handle game over or game won - restart
+    if ((this.state === GameState.GAME_OVER || this.state === GameState.GAME_WON) && this.input.isStartPressed()) {
       this.startNewGame();
       return;
     }
@@ -348,6 +353,14 @@ export class Game {
 
       case GameState.LEVEL_COMPLETE:
         this.updateLevelComplete();
+        break;
+
+      case GameState.INTERMISSION:
+        this.updateIntermission();
+        break;
+
+      case GameState.GAME_WON:
+        // Just waiting for input to restart
         break;
 
       case GameState.GAME_OVER:
@@ -796,8 +809,51 @@ export class Game {
     this.stateTimer--;
 
     if (this.stateTimer <= 0) {
+      // Check if we should play an intermission after this level
+      if (Intermission.shouldPlayAfterLevel(this.level)) {
+        this.startIntermission();
+      } else {
+        this.startNextLevel();
+      }
+    }
+  }
+
+  /**
+   * Start an intermission cutscene
+   */
+  private startIntermission(): void {
+    this.state = GameState.INTERMISSION;
+    this.intermission.start(this.level, () => {
+      this.onIntermissionComplete();
+    });
+  }
+
+  /**
+   * Update during INTERMISSION state
+   */
+  private updateIntermission(): void {
+    this.intermission.update();
+  }
+
+  /**
+   * Called when intermission completes
+   */
+  private onIntermissionComplete(): void {
+    // Check if this was the final level (game won)
+    if (Intermission.isFinalLevel(this.level)) {
+      this.gameWon();
+    } else {
       this.startNextLevel();
     }
+  }
+
+  /**
+   * Handle game won (completed all 5 levels)
+   */
+  private gameWon(): void {
+    this.state = GameState.GAME_WON;
+    this.sound.stopAll();
+    this.renderer.renderGameWonText();
   }
 
   /**
@@ -881,8 +937,9 @@ export class Game {
       startScreen.classList.add('hidden');
     }
 
-    // Clear game over text
+    // Clear game over/won text
     this.renderer.clearGameOverText();
+    this.renderer.clearGameWonText();
 
     // Reset game state
     this.score = 0;
@@ -1020,6 +1077,14 @@ export class Game {
     // Update UI
     this.renderer.renderScore(this.score, this.highScore);
     this.renderer.renderLives(this.pacman.lives);
+
+    // Render intermission overlay if active
+    if (this.state === GameState.INTERMISSION) {
+      const desc = this.intermission.getSceneDescription();
+      this.renderer.renderIntermission(desc.title, desc.message, this.intermission.getProgress());
+    } else {
+      this.renderer.clearIntermission();
+    }
   }
 
   /**
