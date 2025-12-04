@@ -122,6 +122,8 @@ export const GameState = {
   DYING: 'dying',
   GAME_OVER: 'game_over',
   LEVEL_COMPLETE: 'level_complete',
+  INTERMISSION: 'intermission',
+  GAME_WON: 'game_won',
   PAUSED: 'paused',
 } as const;
 
