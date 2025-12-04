@@ -193,9 +193,56 @@ export class Game {
       this.highScore = parseInt(savedHighScore, 10);
     }
 
+    // Load sound mute preference and enable M key shortcut
+    this.sound.loadMutePreference();
+    this.sound.enableMuteShortcut();
+    this.setupMuteButton();
+
     // Initialize sound on first user interaction
     document.addEventListener('click', () => this.sound.init(), { once: true });
     document.addEventListener('keydown', () => this.sound.init(), { once: true });
+  }
+
+  /**
+   * Setup mute button click handler and initial state
+   */
+  private setupMuteButton(): void {
+    const muteBtn = document.getElementById('mute-btn');
+    const muteIcon = muteBtn?.querySelector('.mute-icon');
+
+    if (!muteBtn || !muteIcon) return;
+
+    // Set initial state
+    this.updateMuteButtonUI(muteBtn, muteIcon as HTMLElement);
+
+    // Handle click
+    muteBtn.addEventListener('click', () => {
+      this.sound.toggleMute();
+      this.updateMuteButtonUI(muteBtn, muteIcon as HTMLElement);
+    });
+
+    // Update UI when M key is pressed (sync with keyboard shortcut)
+    document.addEventListener('keydown', (e) => {
+      if (e.key.toLowerCase() === 'm') {
+        // Small delay to let sound.toggleMute() complete first
+        setTimeout(() => {
+          this.updateMuteButtonUI(muteBtn, muteIcon as HTMLElement);
+        }, 10);
+      }
+    });
+  }
+
+  /**
+   * Update mute button visual state
+   */
+  private updateMuteButtonUI(btn: HTMLElement, icon: HTMLElement): void {
+    if (this.sound.isMuted()) {
+      btn.classList.add('muted');
+      icon.textContent = '🔇';
+    } else {
+      btn.classList.remove('muted');
+      icon.textContent = '🔊';
+    }
   }
 
   /**
