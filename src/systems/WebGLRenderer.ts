@@ -655,10 +655,10 @@ export class WebGLRenderer {
    */
   renderMaze(): void {
     const wallColor = this.hexToRGBA(this.currentMazeColor);
-    // Glow layer - same color but transparent
-    const glowColor = [wallColor[0], wallColor[1], wallColor[2], 0.2];
+    // Glow layer - very subtle
+    const glowColor = [wallColor[0], wallColor[1], wallColor[2], 0.1];
     const lineWidth = 2;
-    const glowWidth = 6;
+    const glowWidth = 4;
 
     // First pass: Draw glow layer (underneath)
     for (let row = 0; row < GRID_HEIGHT; row++) {
@@ -750,8 +750,8 @@ export class WebGLRenderer {
    */
   renderPellets(): void {
     const pelletColor = this.hexToRGBA(Colors.PELLET);
-    // Glow color - same but more transparent
-    const glowColor = [pelletColor[0], pelletColor[1], pelletColor[2], 0.3];
+    // Very subtle glow
+    const glowColor = [pelletColor[0], pelletColor[1], pelletColor[2], 0.15];
 
     for (let row = 0; row < GRID_HEIGHT; row++) {
       for (let col = 0; col < GRID_WIDTH; col++) {
@@ -762,14 +762,13 @@ export class WebGLRenderer {
         const y = row * SCALED_TILE + SCALED_TILE / 2;
 
         if (tile === TileType.PELLET) {
-          // Glow behind pellet
-          this.addCircle(x, y, 5, glowColor, 8);
+          // Subtle glow behind pellet
+          this.addCircle(x, y, 4, glowColor, 8);
           // Small pellet
           this.addCircle(x, y, 2, pelletColor, 8);
         } else if (tile === TileType.POWER_PELLET && this.powerPelletVisible) {
-          // Larger glow for power pellet
-          this.addCircle(x, y, 14, glowColor, 12);
-          this.addCircle(x, y, 10, [pelletColor[0], pelletColor[1], pelletColor[2], 0.5], 12);
+          // Subtle glow for power pellet
+          this.addCircle(x, y, 12, glowColor, 12);
           // Large power pellet
           this.addCircle(x, y, 6, pelletColor, 12);
         }
@@ -817,25 +816,21 @@ export class WebGLRenderer {
   ): void {
     const radius = SCALED_TILE / 2 + 4;  // Larger Pac-Man
     const color = this.hexToRGBA(Colors.PACMAN);
-    // Glow layers
-    const glowOuter = [color[0], color[1], color[2], 0.15];
-    const glowInner = [color[0], color[1], color[2], 0.3];
 
     if (isDying) {
       // Death animation - shrinking
       const progress = deathFrame / 11;
       if (progress < 1) {
         const mouthAngle = Math.PI * progress;
-        // Glow even when dying
-        this.addCircle(x, y, radius + 12, glowOuter, 20);
-        this.addCircle(x, y, radius + 6, glowInner, 20);
+        // Soft multi-layer glow
+        this.addCircle(x, y, radius + 14, [color[0], color[1], color[2], 0.04], 16);
+        this.addCircle(x, y, radius + 8, [color[0], color[1], color[2], 0.06], 16);
         this.addPacMan(x, y, radius, Direction.UP, mouthAngle, color);
       }
     } else {
-      // Outer glow
-      this.addCircle(x, y, radius + 12, glowOuter, 20);
-      // Inner glow
-      this.addCircle(x, y, radius + 6, glowInner, 20);
+      // Soft multi-layer glow
+      this.addCircle(x, y, radius + 14, [color[0], color[1], color[2], 0.04], 16);
+      this.addCircle(x, y, radius + 8, [color[0], color[1], color[2], 0.06], 16);
       // Normal animation
       const mouthOpenings = [0, 0.15, 0.35, 0.15];
       const mouthAngle = Math.PI * mouthOpenings[animationFrame % 4];
@@ -874,11 +869,10 @@ export class WebGLRenderer {
       bodyColor = this.hexToRGBA(color);
     }
 
-    // Glow effect behind ghost
-    const glowOuter = [bodyColor[0], bodyColor[1], bodyColor[2], 0.15];
-    const glowInner = [bodyColor[0], bodyColor[1], bodyColor[2], 0.25];
-    this.addCircle(x, y, size / 2 + 14, glowOuter, 16);
-    this.addCircle(x, y, size / 2 + 8, glowInner, 16);
+    // Soft glow effect - multiple layers for blur-like effect
+    this.addCircle(x, y, size / 2 + 16, [bodyColor[0], bodyColor[1], bodyColor[2], 0.04], 16);
+    this.addCircle(x, y, size / 2 + 10, [bodyColor[0], bodyColor[1], bodyColor[2], 0.06], 16);
+    this.addCircle(x, y, size / 2 + 5, [bodyColor[0], bodyColor[1], bodyColor[2], 0.08], 16);
 
     // Draw ghost body
     this.addGhost(x, y, size, bodyColor, animationFrame);
