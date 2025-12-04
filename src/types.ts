@@ -118,6 +118,7 @@ export enum SoundType {
   RETREATING = 'retreating',
   EXTRA_LIFE = 'extraLife',
   INTERMISSION = 'intermission',
+  VICTORY = 'victory',
 }
 
 // Animation frame data

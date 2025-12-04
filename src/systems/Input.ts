@@ -19,6 +19,11 @@ export class Input {
   private queuedDirection: DirectionType = Direction.NONE;
   private enabled = true;
 
+  /** Cheat code buffer */
+  private cheatBuffer: string = '';
+  private cheatActivated: boolean = false;
+  private static readonly CHEAT_SKIP_LEVEL = '===';
+
   constructor() {
     this.setupKeyboardListeners();
     this.setupTouchListeners();
@@ -84,6 +89,23 @@ export class Input {
    * Handle keydown events
    */
   private handleKeyDown(e: KeyboardEvent): void {
+    // Track cheat code input (works even when disabled)
+    if (e.key === '=') {
+      this.cheatBuffer += '=';
+      // Keep only last 3 characters
+      if (this.cheatBuffer.length > 3) {
+        this.cheatBuffer = this.cheatBuffer.slice(-3);
+      }
+      // Check for cheat activation
+      if (this.cheatBuffer === Input.CHEAT_SKIP_LEVEL) {
+        this.cheatActivated = true;
+        this.cheatBuffer = '';
+      }
+    } else {
+      // Reset buffer on any other key
+      this.cheatBuffer = '';
+    }
+
     if (!this.enabled) return;
 
     switch (e.key) {
@@ -255,6 +277,17 @@ export class Input {
       start: false,
     };
     this.queuedDirection = Direction.NONE;
+  }
+
+  /**
+   * Check if skip level cheat was activated (consumes the activation)
+   */
+  isSkipLevelCheatActivated(): boolean {
+    if (this.cheatActivated) {
+      this.cheatActivated = false;
+      return true;
+    }
+    return false;
   }
 
   /**

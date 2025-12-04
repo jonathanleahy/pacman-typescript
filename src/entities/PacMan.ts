@@ -26,8 +26,16 @@ export class PacMan extends Entity {
   public deathAnimationFrame: number = 0;
   public frightenedModeActive: boolean = false;
 
+  /** Victory animation state */
+  public isVictory: boolean = false;
+  public victoryAnimationFrame: number = 0;
+  public victoryRotation: number = 0;
+  public victoryJump: number = 0;
+
   private deathAnimationTimer: number = 0;
   private deathAnimationComplete: boolean = false;
+  private victoryAnimationTimer: number = 0;
+  private victoryAnimationComplete: boolean = false;
   private corneringBuffer: number = 4; // Pixels of "pre-turn" allowed
 
   constructor() {
@@ -54,6 +62,11 @@ export class PacMan extends Entity {
   update(_deltaTime: number): void {
     if (this.isDying) {
       this.updateDeathAnimation();
+      return;
+    }
+
+    if (this.isVictory) {
+      this.updateVictoryAnimation();
       return;
     }
 
@@ -193,6 +206,66 @@ export class PacMan extends Entity {
    */
   isDeathAnimationComplete(): boolean {
     return this.deathAnimationComplete;
+  }
+
+  /** Victory scale for pulsing effect */
+  public victoryScale: number = 1;
+
+  /**
+   * Start victory animation (spin and jump)
+   */
+  startVictory(): void {
+    this.isVictory = true;
+    this.victoryAnimationFrame = 0;
+    this.victoryAnimationTimer = 0;
+    this.victoryAnimationComplete = false;
+    this.victoryRotation = 0;
+    this.victoryJump = 0;
+    this.victoryScale = 1;
+  }
+
+  /**
+   * Update victory animation - EXCITING version!
+   * 3 bouncy jumps, fast spin, size pulse
+   */
+  updateVictoryAnimation(): void {
+    if (!this.isVictory) return;
+
+    this.victoryAnimationTimer++;
+    const t = this.victoryAnimationTimer;
+    const duration = 120; // 2 seconds of excitement
+
+    if (t <= duration) {
+      // FAST spin - 6 full rotations with acceleration then slow down
+      const spinProgress = t / duration;
+      // Ease out cubic - spins fast at start, slows gracefully at end
+      const easedSpin = 1 - Math.pow(1 - spinProgress, 3);
+      this.victoryRotation = easedSpin * Math.PI * 12; // 6 full rotations
+
+      // 4 BOUNCY jumps - each bounce smaller than the last
+      const bounceFreq = 4; // 4 bounces
+      const bounceDecay = 1 - (t / duration) * 0.7; // Bounces decay over time
+      const bouncePhase = (t / duration) * bounceFreq * Math.PI;
+      this.victoryJump = Math.abs(Math.sin(bouncePhase)) * 35 * bounceDecay;
+
+      // SIZE PULSE - grows big then back to normal
+      const pulseFreq = 6; // 6 pulses
+      const pulseAmount = Math.sin((t / duration) * pulseFreq * Math.PI * 2) * 0.35;
+      this.victoryScale = 1 + Math.abs(pulseAmount) * bounceDecay;
+
+    } else {
+      this.victoryAnimationComplete = true;
+      this.victoryScale = 1;
+    }
+
+    this.victoryAnimationFrame = this.victoryAnimationTimer;
+  }
+
+  /**
+   * Check if victory animation is complete
+   */
+  isVictoryAnimationComplete(): boolean {
+    return this.victoryAnimationComplete;
   }
 
   /**

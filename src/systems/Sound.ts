@@ -151,6 +151,20 @@ export class Sound {
       type: 'square',
       volume: 0.4,
     },
+
+    // Victory celebration jingle
+    [SoundType.VICTORY]: {
+      frequency: [523.25, 659.25, 783.99, 659.25, 783.99, 1046.50], // Celebratory arpeggio
+      duration: 1.0,
+      type: 'square',
+      volume: 0.45,
+      envelope: {
+        attack: 0.02,
+        decay: 0.1,
+        sustain: 0.6,
+        release: 0.3,
+      },
+    },
   };
 
   /**

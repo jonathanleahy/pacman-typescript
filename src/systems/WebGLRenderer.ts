@@ -29,6 +29,7 @@ import {
 } from '../constants';
 import { MAZE_DATA } from '../utils/MazeData';
 import { TileType } from '../types';
+import { CutsceneSprite } from './Intermission';
 
 /**
  * Vertex shader source code
@@ -183,6 +184,12 @@ export class WebGLRenderer {
   /** Current game level for theming */
   private currentLevel: number = 1;
 
+  /** Whether maze should flash (level complete) */
+  private mazeFlashing: boolean = false;
+
+  /** Timer for maze flashing animation */
+  private mazeFlashTimer: number = 0;
+
   /** Level theme configurations */
   private readonly levelThemes = {
     // Level 1: Classic Blue - The original arcade look
@@ -196,16 +203,16 @@ export class WebGLRenderer {
       doorColor: [1.0, 0.72, 0.87, 1.0],       // Pink
       doorGlow: [0.6, 0.45, 0.55, 0.5],
     },
-    // Level 2: Neon Green - Cyber/Matrix theme
+    // Level 2: Forest Green - Softer, more retro green
     2: {
-      name: 'Neon Green',
-      wallColor: [0.0, 0.8, 0.2, 1.0],         // Bright green
-      wallGlow: [0.0, 0.4, 0.1, 1.0],
-      wallHighlight: [0.4, 1.0, 0.5, 1.0],
+      name: 'Forest Green',
+      wallColor: [0.15, 0.55, 0.35, 1.0],      // Softer forest green
+      wallGlow: [0.08, 0.3, 0.18, 1.0],
+      wallHighlight: [0.3, 0.7, 0.45, 1.0],
       floorColor1: [0.01, 0.04, 0.02, 1.0],
       floorColor2: [0.02, 0.06, 0.03, 1.0],
-      doorColor: [0.8, 1.0, 0.2, 1.0],         // Yellow-green
-      doorGlow: [0.4, 0.6, 0.1, 0.5],
+      doorColor: [0.6, 0.8, 0.3, 1.0],         // Muted yellow-green
+      doorGlow: [0.3, 0.5, 0.15, 0.5],
     },
     // Level 3: Muted Red - Softer danger zone
     3: {
@@ -390,6 +397,25 @@ export class WebGLRenderer {
   }
 
   /**
+   * Enable/disable maze flashing (for level complete)
+   */
+  setMazeFlashing(enabled: boolean): void {
+    this.mazeFlashing = enabled;
+    if (enabled) {
+      this.mazeFlashTimer = 0;
+    }
+  }
+
+  /**
+   * Update maze flash timer (call each frame during level complete)
+   */
+  updateMazeFlash(): void {
+    if (this.mazeFlashing) {
+      this.mazeFlashTimer++;
+    }
+  }
+
+  /**
    * Get the current level's theme, cycling through themes for levels > 3
    */
   private getTheme() {
@@ -526,7 +552,8 @@ export class WebGLRenderer {
     radius: number,
     direction: number,
     mouthAngle: number,
-    color: number[]
+    color: number[],
+    extraRotation: number = 0
   ): void {
     // Calculate rotation based on direction
     let rotation = 0;
@@ -536,6 +563,8 @@ export class WebGLRenderer {
       case Direction.LEFT: rotation = Math.PI; break;
       case Direction.UP: rotation = -Math.PI / 2; break;
     }
+    // Add extra rotation for victory spin
+    rotation += extraRotation;
 
     // Draw circle segments, skipping the mouth area
     const segments = 20;
@@ -712,9 +741,27 @@ export class WebGLRenderer {
   renderMaze(): void {
     // Get theme colors for current level
     const theme = this.getTheme();
-    const wallColor = [...theme.wallColor];
+    let wallColor: [number, number, number, number] = [
+      theme.wallColor[0],
+      theme.wallColor[1],
+      theme.wallColor[2],
+      theme.wallColor[3]
+    ];
     const doorColor = [...theme.doorColor];
     const lineWidth = 2;
+
+    // Gentle pulse effect during level complete (no harsh flashing)
+    if (this.mazeFlashing) {
+      // Smooth sine wave pulse - brightens walls gently
+      const pulse = Math.sin(this.mazeFlashTimer * 0.15) * 0.5 + 0.5;
+      const brighten = pulse * 0.4; // Max 40% brighter
+      wallColor = [
+        Math.min(1, wallColor[0] + brighten),
+        Math.min(1, wallColor[1] + brighten),
+        Math.min(1, wallColor[2] + brighten),
+        1.0
+      ];
+    }
 
     for (let row = 0; row < GRID_HEIGHT; row++) {
       for (let col = 0; col < GRID_WIDTH; col++) {
@@ -818,6 +865,34 @@ export class WebGLRenderer {
   }
 
   /**
+   * Clear all pellets (for cheat code)
+   */
+  clearAllPellets(): void {
+    for (let row = 0; row < this.pelletState.length; row++) {
+      for (let col = 0; col < this.pelletState[row].length; col++) {
+        this.pelletState[row][col] = false;
+      }
+    }
+  }
+
+  /**
+   * Clear all pellets except for specified positions
+   * @param keepPositions - Array of [col, row] positions to keep
+   */
+  clearAllPelletsExcept(keepPositions: [number, number][]): void {
+    const keepSet = new Set(keepPositions.map(([col, row]) => `${col},${row}`));
+
+    for (let row = 0; row < this.pelletState.length; row++) {
+      for (let col = 0; col < this.pelletState[row].length; col++) {
+        const key = `${col},${row}`;
+        if (!keepSet.has(key)) {
+          this.pelletState[row][col] = false;
+        }
+      }
+    }
+  }
+
+  /**
    * Render Pac-Man with glow effect
    */
   renderPacMan(
@@ -826,23 +901,36 @@ export class WebGLRenderer {
     direction: number,
     animationFrame: number,
     isDying: boolean = false,
-    deathFrame: number = 0
+    deathFrame: number = 0,
+    isVictory: boolean = false,
+    victoryRotation: number = 0,
+    victoryJump: number = 0
   ): void {
     const radius = SCALED_TILE / 2 + 4;  // Larger Pac-Man
     const color = this.hexToRGBA(Colors.PACMAN);
+
+    // Apply victory jump offset
+    const renderY = isVictory ? y - victoryJump : y;
 
     if (isDying) {
       // Death animation - shrinking
       const progress = deathFrame / 11;
       if (progress < 1) {
         const mouthAngle = Math.PI * progress;
-        this.addPacMan(x, y, radius, Direction.UP, mouthAngle, color);
+        this.addPacMan(x, renderY, radius, Direction.UP, mouthAngle, color, victoryRotation);
       }
+    } else if (isVictory) {
+      // Victory animation - spinning with EXCITED fast chomping!
+      // Rapid mouth animation - chomps 8x faster than normal
+      const victoryMouthOpenings = [0.1, 0.4, 0.1, 0.4];
+      const fastFrame = Math.floor(animationFrame * 2) % 4;
+      const mouthAngle = Math.PI * victoryMouthOpenings[fastFrame];
+      this.addPacMan(x, renderY, radius * 1, Direction.RIGHT, mouthAngle, color, victoryRotation);
     } else {
       // Normal animation
       const mouthOpenings = [0, 0.15, 0.35, 0.15];
       const mouthAngle = Math.PI * mouthOpenings[animationFrame % 4];
-      this.addPacMan(x, y, radius, direction, mouthAngle, color);
+      this.addPacMan(x, renderY, radius, direction, mouthAngle, color);
     }
   }
 
@@ -902,6 +990,16 @@ export class WebGLRenderer {
     }
     if (highScoreEl) {
       highScoreEl.textContent = highScore.toString().padStart(2, '0');
+    }
+  }
+
+  /**
+   * Render current level display
+   */
+  renderLevel(level: number): void {
+    const levelEl = document.getElementById('level');
+    if (levelEl) {
+      levelEl.textContent = level.toString();
     }
   }
 
@@ -1048,44 +1146,223 @@ export class WebGLRenderer {
     if (text) text.remove();
   }
 
+  private gameWonAnimFrame: number = 0;
+
   /**
-   * Render "YOU WIN!" text for completing all levels
+   * Render epic "YOU WIN!" celebration screen
    */
   renderGameWonText(): void {
-    const existing = document.getElementById('gamewon-text');
-    if (!existing) {
+    this.gameWonAnimFrame++;
+
+    let container = document.getElementById('gamewon-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'gamewon-container';
+      container.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(ellipse at center, #1a0a2e 0%, #000 70%);
+        z-index: 100;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+      `;
+
+      // Animated background stars
+      for (let i = 0; i < 50; i++) {
+        const star = document.createElement('div');
+        star.className = 'win-star';
+        star.style.cssText = `
+          position: absolute;
+          width: ${2 + Math.random() * 4}px;
+          height: ${2 + Math.random() * 4}px;
+          background: #fff;
+          border-radius: 50%;
+          left: ${Math.random() * 100}%;
+          top: ${Math.random() * 100}%;
+          animation: twinkle ${1 + Math.random() * 2}s ease-in-out infinite;
+          animation-delay: ${Math.random() * 2}s;
+          opacity: ${0.3 + Math.random() * 0.7};
+        `;
+        container.appendChild(star);
+      }
+
+      // Main title container for animations
+      const titleWrapper = document.createElement('div');
+      titleWrapper.id = 'gamewon-title-wrapper';
+      titleWrapper.style.cssText = `
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        animation: bounceIn 0.8s ease-out;
+      `;
+
+      // Giant "YOU WIN!" text with rainbow animation
       const text = document.createElement('div');
       text.id = 'gamewon-text';
       text.style.cssText = `
-        position: absolute;
-        top: ${14 * SCALED_TILE}px;
-        left: 50%;
-        transform: translateX(-50%);
         color: #00ff00;
         font-family: 'Press Start 2P', monospace;
-        font-size: 24px;
+        font-size: 48px;
         z-index: 10;
-        text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00;
-        animation: pulse 1s ease-in-out infinite;
+        text-shadow:
+          0 0 20px #00ff00,
+          0 0 40px #00ff00,
+          0 0 60px #00ff00,
+          0 0 80px #00ff00,
+          4px 4px 0 #005500;
+        animation: rainbowGlow 2s ease-in-out infinite, bigPulse 0.5s ease-in-out infinite;
+        letter-spacing: 8px;
       `;
       text.textContent = 'YOU WIN!';
-      document.getElementById('game-container')?.appendChild(text);
+      titleWrapper.appendChild(text);
 
-      // Add subtitle
+      // Score display
+      const scoreDisplay = document.createElement('div');
+      scoreDisplay.id = 'gamewon-score';
+      scoreDisplay.style.cssText = `
+        color: #ffff00;
+        font-family: 'Press Start 2P', monospace;
+        font-size: 20px;
+        margin-top: 40px;
+        text-shadow: 0 0 10px #ffff00;
+        animation: fadeInUp 1s ease-out 0.5s both;
+      `;
+      titleWrapper.appendChild(scoreDisplay);
+
+      // Champion message
+      const champion = document.createElement('div');
+      champion.id = 'gamewon-champion';
+      champion.style.cssText = `
+        color: #ff00ff;
+        font-family: 'Press Start 2P', monospace;
+        font-size: 16px;
+        margin-top: 20px;
+        text-shadow: 0 0 15px #ff00ff;
+        animation: fadeInUp 1s ease-out 1s both;
+      `;
+      champion.textContent = 'CHAMPION!';
+      titleWrapper.appendChild(champion);
+
+      // Subtitle
       const subtitle = document.createElement('div');
       subtitle.id = 'gamewon-subtitle';
       subtitle.style.cssText = `
-        position: absolute;
-        top: ${18 * SCALED_TILE}px;
-        left: 50%;
-        transform: translateX(-50%);
-        color: #ffff00;
+        color: #888888;
         font-family: 'Press Start 2P', monospace;
         font-size: 12px;
-        z-index: 10;
+        margin-top: 60px;
+        animation: blink 1s step-end infinite, fadeInUp 1s ease-out 1.5s both;
       `;
       subtitle.textContent = 'PRESS SPACE TO PLAY AGAIN';
-      document.getElementById('game-container')?.appendChild(subtitle);
+      titleWrapper.appendChild(subtitle);
+
+      container.appendChild(titleWrapper);
+
+      // Floating ghosts celebration
+      const ghostColors = ['#ff0000', '#ffb8ff', '#00ffff', '#ffb852'];
+      for (let i = 0; i < 4; i++) {
+        const ghost = document.createElement('div');
+        ghost.className = 'win-ghost';
+        ghost.innerHTML = `
+          <svg viewBox="0 0 24 28" width="40" height="48">
+            <path fill="${ghostColors[i]}" d="M12 0C6 0 1 5 1 11v13l3-4 3 4 3-4 3 4 3-4 3 4V11c0-6-5-11-11-11z"/>
+            <circle fill="white" cx="8" cy="10" r="3"/>
+            <circle fill="white" cx="16" cy="10" r="3"/>
+            <circle fill="blue" cx="9" cy="10" r="1.5"/>
+            <circle fill="blue" cx="17" cy="10" r="1.5"/>
+          </svg>
+        `;
+        ghost.style.cssText = `
+          position: absolute;
+          left: ${10 + i * 22}%;
+          bottom: -60px;
+          animation: floatUp 4s ease-out ${i * 0.3}s infinite;
+          filter: drop-shadow(0 0 10px ${ghostColors[i]});
+        `;
+        container.appendChild(ghost);
+      }
+
+      // Confetti elements
+      for (let i = 0; i < 30; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'win-confetti';
+        const colors = ['#ff0000', '#ffff00', '#00ff00', '#00ffff', '#ff00ff', '#ff8800'];
+        confetti.style.cssText = `
+          position: absolute;
+          width: ${5 + Math.random() * 10}px;
+          height: ${5 + Math.random() * 10}px;
+          background: ${colors[Math.floor(Math.random() * colors.length)]};
+          left: ${Math.random() * 100}%;
+          top: -20px;
+          animation: confettiFall ${3 + Math.random() * 4}s linear infinite;
+          animation-delay: ${Math.random() * 3}s;
+          transform: rotate(${Math.random() * 360}deg);
+          opacity: 0.9;
+        `;
+        container.appendChild(confetti);
+      }
+
+      // Add CSS animations
+      const style = document.createElement('style');
+      style.id = 'gamewon-styles';
+      style.textContent = `
+        @keyframes rainbowGlow {
+          0% { color: #00ff00; text-shadow: 0 0 20px #00ff00, 0 0 40px #00ff00, 0 0 60px #00ff00; }
+          25% { color: #00ffff; text-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff, 0 0 60px #00ffff; }
+          50% { color: #ffff00; text-shadow: 0 0 20px #ffff00, 0 0 40px #ffff00, 0 0 60px #ffff00; }
+          75% { color: #ff00ff; text-shadow: 0 0 20px #ff00ff, 0 0 40px #ff00ff, 0 0 60px #ff00ff; }
+          100% { color: #00ff00; text-shadow: 0 0 20px #00ff00, 0 0 40px #00ff00, 0 0 60px #00ff00; }
+        }
+        @keyframes bigPulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.05); }
+        }
+        @keyframes bounceIn {
+          0% { transform: scale(0); opacity: 0; }
+          50% { transform: scale(1.2); }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(30px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes blink {
+          50% { opacity: 0; }
+        }
+        @keyframes twinkle {
+          0%, 100% { opacity: 0.3; transform: scale(1); }
+          50% { opacity: 1; transform: scale(1.5); }
+        }
+        @keyframes floatUp {
+          0% { transform: translateY(0); opacity: 0; }
+          10% { opacity: 1; }
+          90% { opacity: 1; }
+          100% { transform: translateY(-600px); opacity: 0; }
+        }
+        @keyframes confettiFall {
+          0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+          100% { transform: translateY(600px) rotate(720deg); opacity: 0; }
+        }
+      `;
+      document.head.appendChild(style);
+
+      document.getElementById('game-container')?.appendChild(container);
+    }
+  }
+
+  /**
+   * Update game won score display
+   */
+  updateGameWonScore(score: number): void {
+    const scoreEl = document.getElementById('gamewon-score');
+    if (scoreEl) {
+      scoreEl.textContent = `FINAL SCORE: ${score.toString().padStart(8, '0')}`;
     }
   }
 
@@ -1093,16 +1370,17 @@ export class WebGLRenderer {
    * Clear game won text
    */
   clearGameWonText(): void {
-    const text = document.getElementById('gamewon-text');
-    const subtitle = document.getElementById('gamewon-subtitle');
-    if (text) text.remove();
-    if (subtitle) subtitle.remove();
+    const container = document.getElementById('gamewon-container');
+    const styles = document.getElementById('gamewon-styles');
+    if (container) container.remove();
+    if (styles) styles.remove();
+    this.gameWonAnimFrame = 0;
   }
 
   /**
-   * Render intermission screen
+   * Render intermission screen with animated cutscene
    */
-  renderIntermission(title: string, message: string, progress: number): void {
+  renderIntermission(title: string, message: string, progress: number, sprites?: CutsceneSprite[]): void {
     let container = document.getElementById('intermission-container');
     if (!container) {
       container = document.createElement('div');
@@ -1115,41 +1393,59 @@ export class WebGLRenderer {
         height: 100%;
         display: flex;
         flex-direction: column;
-        justify-content: center;
+        justify-content: flex-start;
         align-items: center;
-        background: rgba(0, 0, 0, 0.9);
+        background: #000;
         z-index: 100;
+        overflow: hidden;
       `;
 
+      // Title at top
       const titleEl = document.createElement('div');
       titleEl.id = 'intermission-title';
       titleEl.style.cssText = `
         color: #00ffff;
         font-family: 'Press Start 2P', monospace;
         font-size: 32px;
-        margin-bottom: 20px;
-        text-shadow: 0 0 10px #00ffff;
+        margin-top: 60px;
+        margin-bottom: 10px;
+        text-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff;
       `;
       container.appendChild(titleEl);
 
+      // Message below title
       const messageEl = document.createElement('div');
       messageEl.id = 'intermission-message';
       messageEl.style.cssText = `
         color: #ffff00;
         font-family: 'Press Start 2P', monospace;
         font-size: 16px;
-        margin-bottom: 40px;
+        margin-bottom: 20px;
+        text-shadow: 0 0 10px #ffff00;
       `;
       container.appendChild(messageEl);
 
+      // Canvas for animated sprites
+      const cutsceneCanvas = document.createElement('canvas');
+      cutsceneCanvas.id = 'cutscene-canvas';
+      cutsceneCanvas.width = 672;
+      cutsceneCanvas.height = 400;
+      cutsceneCanvas.style.cssText = `
+        margin-top: 20px;
+      `;
+      container.appendChild(cutsceneCanvas);
+
+      // Skip text at bottom
       const skipEl = document.createElement('div');
       skipEl.id = 'intermission-skip';
       skipEl.style.cssText = `
-        color: #888888;
+        color: #666666;
         font-family: 'Press Start 2P', monospace;
         font-size: 10px;
+        position: absolute;
+        bottom: 40px;
       `;
-      skipEl.textContent = 'PRESS ANY KEY TO SKIP';
+      skipEl.textContent = 'PRESS SPACE TO SKIP';
       container.appendChild(skipEl);
 
       document.getElementById('game-container')?.appendChild(container);
@@ -1161,6 +1457,18 @@ export class WebGLRenderer {
     if (titleEl) titleEl.textContent = title;
     if (messageEl) messageEl.textContent = message;
 
+    // Render sprites on canvas
+    const canvas = document.getElementById('cutscene-canvas') as HTMLCanvasElement;
+    if (canvas && sprites && sprites.length > 0) {
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        for (const sprite of sprites) {
+          this.renderCutsceneSprite(ctx, sprite);
+        }
+      }
+    }
+
     // Fade effect based on progress
     if (progress < 0.1) {
       container.style.opacity = String(progress * 10);
@@ -1169,6 +1477,129 @@ export class WebGLRenderer {
     } else {
       container.style.opacity = '1';
     }
+  }
+
+  /**
+   * Render a single cutscene sprite on canvas
+   */
+  private renderCutsceneSprite(ctx: CanvasRenderingContext2D, sprite: CutsceneSprite): void {
+    ctx.save();
+    ctx.translate(sprite.x, sprite.y);
+
+    const baseSize = 24 * sprite.scale;
+
+    if (sprite.type === 'pacman' || sprite.type === 'bigpacman') {
+      // Draw Pac-Man
+      ctx.fillStyle = '#ffff00';
+
+      const mouthOpenings = [0, 0.15, 0.35, 0.15];
+      const mouthAngle = Math.PI * mouthOpenings[sprite.animFrame % 4];
+
+      let startAngle: number, endAngle: number;
+
+      switch (sprite.direction) {
+        case 3: // RIGHT
+          startAngle = mouthAngle;
+          endAngle = Math.PI * 2 - mouthAngle;
+          break;
+        case 2: // LEFT
+          startAngle = Math.PI + mouthAngle;
+          endAngle = Math.PI - mouthAngle;
+          break;
+        case 0: // UP
+          startAngle = -Math.PI / 2 + mouthAngle;
+          endAngle = -Math.PI / 2 - mouthAngle + Math.PI * 2;
+          break;
+        case 1: // DOWN
+          startAngle = Math.PI / 2 + mouthAngle;
+          endAngle = Math.PI / 2 - mouthAngle + Math.PI * 2;
+          break;
+        default:
+          startAngle = mouthAngle;
+          endAngle = Math.PI * 2 - mouthAngle;
+      }
+
+      ctx.beginPath();
+      ctx.arc(0, 0, baseSize / 2, startAngle, endAngle);
+      ctx.lineTo(0, 0);
+      ctx.closePath();
+      ctx.fill();
+
+      // Add glow
+      ctx.shadowColor = '#ffff00';
+      ctx.shadowBlur = 15 * sprite.scale;
+      ctx.fill();
+    } else {
+      // Draw Ghost
+      const ghostColor = sprite.frightened ? '#2121de' : (sprite.color || '#ff0000');
+      ctx.fillStyle = ghostColor;
+
+      const radius = baseSize / 2;
+      const waveOffset = (sprite.animFrame % 2) * 3;
+
+      // Ghost body (rounded top)
+      ctx.beginPath();
+      ctx.arc(0, -radius / 4, radius, Math.PI, 0, false);
+
+      // Wavy bottom
+      const waveCount = 3;
+      const waveWidth = (radius * 2) / waveCount;
+      const waveHeight = radius / 3;
+
+      ctx.lineTo(radius, radius / 2);
+      for (let i = waveCount; i > 0; i--) {
+        const wx = radius - (waveCount - i + 0.5) * waveWidth;
+        const wy = radius / 2 + ((i + waveOffset) % 2 === 0 ? waveHeight : 0);
+        ctx.lineTo(wx, wy);
+      }
+      ctx.lineTo(-radius, radius / 2);
+      ctx.closePath();
+      ctx.fill();
+
+      // Add glow
+      ctx.shadowColor = ghostColor;
+      ctx.shadowBlur = 10 * sprite.scale;
+      ctx.fill();
+
+      // Eyes
+      ctx.shadowBlur = 0;
+      const eyeRadius = radius / 4;
+      const eyeY = -radius / 4;
+      const pupilRadius = eyeRadius / 2;
+
+      // Frightened mode - different eyes
+      if (sprite.frightened) {
+        ctx.fillStyle = '#ffffff';
+        // Worried expression - small dots
+        ctx.beginPath();
+        ctx.arc(-radius / 3, eyeY, eyeRadius / 2, 0, Math.PI * 2);
+        ctx.arc(radius / 3, eyeY, eyeRadius / 2, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        // Normal eyes - white with pupils
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(-radius / 3, eyeY, eyeRadius, 0, Math.PI * 2);
+        ctx.arc(radius / 3, eyeY, eyeRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Pupils - direction based
+        ctx.fillStyle = '#0000ff';
+        let pupilOffsetX = 0, pupilOffsetY = 0;
+        switch (sprite.direction) {
+          case 2: pupilOffsetX = -pupilRadius / 2; break; // LEFT
+          case 3: pupilOffsetX = pupilRadius / 2; break; // RIGHT
+          case 0: pupilOffsetY = -pupilRadius / 2; break; // UP
+          case 1: pupilOffsetY = pupilRadius / 2; break; // DOWN
+        }
+        ctx.beginPath();
+        ctx.arc(-radius / 3 + pupilOffsetX, eyeY + pupilOffsetY, pupilRadius, 0, Math.PI * 2);
+        ctx.arc(radius / 3 + pupilOffsetX, eyeY + pupilOffsetY, pupilRadius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    ctx.restore();
   }
 
   /**

@@ -279,4 +279,55 @@ export class Collision {
     if (col < 0 || col >= this.pelletGrid[row].length) return false;
     return this.pelletGrid[row][col];
   }
+
+  /**
+   * Clear all remaining pellets (for cheat code)
+   */
+  clearAllPellets(): void {
+    for (let row = 0; row < this.pelletGrid.length; row++) {
+      for (let col = 0; col < this.pelletGrid[row].length; col++) {
+        this.pelletGrid[row][col] = false;
+      }
+    }
+    this.pelletsRemaining = 0;
+  }
+
+  /**
+   * Clear all pellets except for specified positions
+   * @param keepPositions - Array of [col, row] positions to keep
+   */
+  clearAllPelletsExcept(keepPositions: [number, number][]): void {
+    // Create a set for quick lookup
+    const keepSet = new Set(keepPositions.map(([col, row]) => `${col},${row}`));
+
+    let kept = 0;
+    for (let row = 0; row < this.pelletGrid.length; row++) {
+      for (let col = 0; col < this.pelletGrid[row].length; col++) {
+        const key = `${col},${row}`;
+        if (keepSet.has(key) && this.pelletGrid[row][col]) {
+          // Keep this pellet
+          kept++;
+        } else {
+          this.pelletGrid[row][col] = false;
+        }
+      }
+    }
+    this.pelletsRemaining = kept;
+  }
+
+  /**
+   * Get a random pellet position from remaining pellets
+   */
+  getRandomPelletPosition(): [number, number] | null {
+    const pellets: [number, number][] = [];
+    for (let row = 0; row < this.pelletGrid.length; row++) {
+      for (let col = 0; col < this.pelletGrid[row].length; col++) {
+        if (this.pelletGrid[row][col]) {
+          pellets.push([col, row]);
+        }
+      }
+    }
+    if (pellets.length === 0) return null;
+    return pellets[Math.floor(Math.random() * pellets.length)];
+  }
 }

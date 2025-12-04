@@ -300,6 +300,12 @@ export class Game {
    * Process input
    */
   private processInput(): void {
+    // Check for skip level cheat (works in any state during gameplay)
+    if (this.state === GameState.PLAYING && this.input.isSkipLevelCheatActivated()) {
+      this.skipLevel();
+      return;
+    }
+
     // Handle start screen
     if (this.state === GameState.START_SCREEN) {
       if (this.input.isStartPressed()) {
@@ -328,6 +334,22 @@ export class Game {
   }
 
   /**
+   * Skip the current level (cheat code)
+   * Leaves 1 pellet in a random location for the player to eat
+   */
+  private skipLevel(): void {
+    // Don't skip if already in a transition state
+    if (this.state !== GameState.PLAYING) return;
+
+    // Find a random pellet location to keep
+    const randomPellet = this.collision.getRandomPelletPosition();
+    if (randomPellet) {
+      this.collision.clearAllPelletsExcept([randomPellet]);
+      this.renderer.clearAllPelletsExcept([randomPellet]);
+    }
+  }
+
+  /**
    * Update game state
    */
   private update(_deltaTime: number): void {
@@ -349,6 +371,10 @@ export class Game {
 
       case GameState.DYING:
         this.updateDying();
+        break;
+
+      case GameState.VICTORY_ANIMATION:
+        this.updateVictoryAnimation();
         break;
 
       case GameState.LEVEL_COMPLETE:
@@ -426,9 +452,9 @@ export class Game {
     const collisions = this.collision.checkCollisions(this.pacman, this.ghosts);
     this.handleCollisions(collisions);
 
-    // Check level complete
+    // Check level complete - trigger victory animation first
     if (this.collision.isLevelComplete()) {
-      this.completeLevel();
+      this.startVictoryAnimation();
     }
 
     // Release more ghosts based on pellets eaten
@@ -495,7 +521,8 @@ export class Game {
       return;
     }
 
-    this.frightenedTimer = duration;
+    // Add to existing timer (extends duration if already frightened)
+    this.frightenedTimer += duration;
 
     // Set ghosts to frightened
     for (const ghost of this.ghosts) {
@@ -808,7 +835,13 @@ export class Game {
   private updateLevelComplete(): void {
     this.stateTimer--;
 
+    // Update maze flash animation
+    this.renderer.updateMazeFlash();
+
     if (this.stateTimer <= 0) {
+      // Stop maze flashing
+      this.renderer.setMazeFlashing(false);
+
       // Check if we should play an intermission after this level
       if (Intermission.shouldPlayAfterLevel(this.level)) {
         this.startIntermission();
@@ -854,6 +887,100 @@ export class Game {
     this.state = GameState.GAME_WON;
     this.sound.stopAll();
     this.renderer.renderGameWonText();
+    this.renderer.updateGameWonScore(this.score);
+
+    // Play epic victory celebration music!
+    this.sound.play(SoundType.VICTORY);
+
+    // Big screen effects
+    this.effects.flash({ color: [0, 1, 0, 0.5], duration: 20 });
+    this.effects.shake({ intensity: 12, duration: 40, decay: 0.85 });
+  }
+
+  /**
+   * Start the victory animation (Pac-Man spin and jump)
+   */
+  private startVictoryAnimation(): void {
+    this.state = GameState.VICTORY_ANIMATION;
+    this.sound.stopAll();
+    this.pacman.startVictory();
+
+    // Play victory celebration music!
+    this.sound.play(SoundType.VICTORY);
+
+    // EXCITEMENT! Screen flash and shake
+    this.effects.flash({ color: [1, 1, 0, 0.4], duration: 10 }); // Yellow flash
+    this.effects.shake({ intensity: 8, duration: 30, decay: 0.9 });
+
+    // CONFETTI! Burst of colorful particles
+    const colors = [
+      [1, 1, 0, 1],    // Yellow
+      [0, 1, 1, 1],    // Cyan
+      [1, 0.5, 0, 1],  // Orange
+      [1, 0, 1, 1],    // Magenta
+      [0, 1, 0, 1],    // Green
+    ];
+    for (let i = 0; i < 30; i++) {
+      const color = colors[i % colors.length];
+      this.particles.emit(
+        this.pacman.position.x,
+        this.pacman.position.y,
+        {
+          count: 1,
+          speed: 3 + Math.random() * 4,
+          speedVariance: 2,
+          life: 40 + Math.floor(Math.random() * 30),
+          lifeVariance: 10,
+          size: 3 + Math.random() * 3,
+          sizeVariance: 1,
+          color: color,
+          gravity: 0.15,
+          spread: Math.PI * 2,
+        }
+      );
+    }
+  }
+
+  /** Timer for continuous victory effects */
+  private victoryEffectTimer: number = 0;
+
+  /**
+   * Update during VICTORY_ANIMATION state
+   */
+  private updateVictoryAnimation(): void {
+    this.pacman.update(FRAME_TIME);
+    this.particles.update();
+    this.effects.update();
+
+    // Continuous sparkles during victory
+    this.victoryEffectTimer++;
+    if (this.victoryEffectTimer % 5 === 0) {
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 20 + Math.random() * 15;
+      this.particles.emit(
+        this.pacman.position.x + Math.cos(angle) * dist,
+        this.pacman.position.y - this.pacman.victoryJump + Math.sin(angle) * dist,
+        {
+          count: 1,
+          speed: 1,
+          speedVariance: 0.5,
+          life: 20,
+          lifeVariance: 5,
+          size: 2 + Math.random() * 2,
+          sizeVariance: 1,
+          color: [1, 1, 0.5, 1], // Golden sparkle
+          gravity: 0,
+          spread: 0,
+        }
+      );
+    }
+
+    if (this.pacman.isVictoryAnimationComplete()) {
+      // Reset victory state and proceed to level complete
+      this.pacman.isVictory = false;
+      this.victoryEffectTimer = 0;
+      this.completeLevel();
+    }
   }
 
   /**
@@ -865,7 +992,8 @@ export class Game {
 
     this.sound.stopAll();
 
-    // Flash maze animation could go here
+    // Enable maze flashing animation
+    this.renderer.setMazeFlashing(true);
   }
 
   /**
@@ -1038,7 +1166,10 @@ export class Game {
         this.pacman.direction,
         this.pacman.getAnimationFrame(),
         this.pacman.isDying,
-        this.pacman.deathAnimationFrame
+        this.pacman.deathAnimationFrame,
+        this.pacman.isVictory,
+        this.pacman.victoryRotation,
+        this.pacman.victoryJump
       );
 
       // Render ghosts (unless dying)
@@ -1076,12 +1207,18 @@ export class Game {
 
     // Update UI
     this.renderer.renderScore(this.score, this.highScore);
+    this.renderer.renderLevel(this.level);
     this.renderer.renderLives(this.pacman.lives);
 
     // Render intermission overlay if active
     if (this.state === GameState.INTERMISSION) {
       const desc = this.intermission.getSceneDescription();
-      this.renderer.renderIntermission(desc.title, desc.message, this.intermission.getProgress());
+      this.renderer.renderIntermission(
+        desc.title,
+        desc.message,
+        this.intermission.getProgress(),
+        this.intermission.getSprites()
+      );
     } else {
       this.renderer.clearIntermission();
     }
