@@ -151,6 +151,22 @@ export class Sound {
       type: 'square',
       volume: 0.4,
     },
+
+    // Level complete fanfare
+    [SoundType.LEVEL_COMPLETE]: {
+      frequency: [523.25, 587.33, 659.25, 698.46, 783.99, 880.00, 987.77, 1046.50], // C5 to C6 scale
+      duration: 1.0,
+      type: 'square',
+      volume: 0.35,
+    },
+
+    // Victory fanfare (game won)
+    [SoundType.VICTORY]: {
+      frequency: [523.25, 659.25, 783.99, 1046.50, 1318.51, 1567.98], // C5, E5, G5, C6, E6, G6
+      duration: 1.5,
+      type: 'square',
+      volume: 0.4,
+    },
   };
 
   /**

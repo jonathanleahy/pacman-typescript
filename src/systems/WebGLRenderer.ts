@@ -1219,6 +1219,83 @@ export class WebGLRenderer {
   }
 
   /**
+   * Trigger maze flash animation on level complete
+   */
+  flashMaze(): void {
+    this.canvas.classList.add('level-complete');
+    setTimeout(() => {
+      this.canvas.classList.remove('level-complete');
+    }, 800); // 4 flashes at 0.2s each
+  }
+
+  /**
+   * Update level indicator display
+   */
+  renderLevel(level: number): void {
+    const levelEl = document.getElementById('level');
+    if (levelEl) {
+      levelEl.textContent = level.toString();
+    }
+  }
+
+  /**
+   * Add fruit to history display
+   */
+  addFruitToHistory(fruitType: number): void {
+    const fruitHistory = document.getElementById('fruit-history');
+    if (!fruitHistory) return;
+
+    // Max 7 fruits shown
+    const icons = fruitHistory.querySelectorAll('.fruit-icon');
+    if (icons.length >= 7) {
+      icons[0].remove();
+    }
+
+    const icon = document.createElement('div');
+    icon.className = 'fruit-icon';
+
+    // Fruit colors based on type
+    const fruitColors = [
+      '#ff0000', // Cherry
+      '#ff6666', // Strawberry
+      '#ff8800', // Orange
+      '#ff0000', // Apple
+      '#00ff00', // Melon
+      '#00ffff', // Galaxian
+      '#ffff00', // Bell
+      '#ffffff', // Key
+    ];
+
+    icon.style.backgroundColor = fruitColors[fruitType] || '#ff0000';
+    icon.style.color = fruitColors[fruitType] || '#ff0000';
+    fruitHistory.appendChild(icon);
+  }
+
+  /**
+   * Clear fruit history (on new game)
+   */
+  clearFruitHistory(): void {
+    const fruitHistory = document.getElementById('fruit-history');
+    if (fruitHistory) {
+      fruitHistory.innerHTML = '';
+    }
+  }
+
+  /**
+   * Flash high score when beaten
+   */
+  flashHighScore(isNew: boolean): void {
+    const highScoreEl = document.getElementById('high-score');
+    if (highScoreEl) {
+      if (isNew) {
+        highScoreEl.classList.add('new-high');
+      } else {
+        highScoreEl.classList.remove('new-high');
+      }
+    }
+  }
+
+  /**
    * Render intermission screen
    */
   renderIntermission(title: string, message: string, progress: number): void {
