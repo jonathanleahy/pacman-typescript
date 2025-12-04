@@ -152,18 +152,20 @@ export class Sound {
       volume: 0.4,
     },
 
-    // Victory celebration jingle
-    [SoundType.VICTORY]: {
-      frequency: [523.25, 659.25, 783.99, 659.25, 783.99, 1046.50], // Celebratory arpeggio
+    // Level complete fanfare
+    [SoundType.LEVEL_COMPLETE]: {
+      frequency: [523.25, 587.33, 659.25, 698.46, 783.99, 880.00, 987.77, 1046.50], // C5 to C6 scale
       duration: 1.0,
       type: 'square',
-      volume: 0.45,
-      envelope: {
-        attack: 0.02,
-        decay: 0.1,
-        sustain: 0.6,
-        release: 0.3,
-      },
+      volume: 0.35,
+    },
+
+    // Victory fanfare (game won)
+    [SoundType.VICTORY]: {
+      frequency: [523.25, 659.25, 783.99, 1046.50, 1318.51, 1567.98], // C5, E5, G5, C6, E6, G6
+      duration: 1.5,
+      type: 'square',
+      volume: 0.4,
     },
   };
 

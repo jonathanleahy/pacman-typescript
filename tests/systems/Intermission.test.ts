@@ -177,21 +177,21 @@ describe('Intermission', () => {
       intermission.start(2, () => {});
       const desc = intermission.getSceneDescription();
       expect(desc.title).toBe('ACT I');
-      expect(desc.message).toBe('THE CHASE BEGINS');
+      expect(desc.message).toBe('THE CHASE');
     });
 
     it('should return ACT II for level 3', () => {
       intermission.start(3, () => {});
       const desc = intermission.getSceneDescription();
       expect(desc.title).toBe('ACT II');
-      expect(desc.message).toBe('THEY CORNER HIM');
+      expect(desc.message).toBe('THE TABLES TURN');
     });
 
     it('should return ACT III for level 4', () => {
       intermission.start(4, () => {});
       const desc = intermission.getSceneDescription();
       expect(desc.title).toBe('ACT III');
-      expect(desc.message).toBe('THE TABLES TURN');
+      expect(desc.message).toBe('THE CELEBRATION');
     });
 
     it('should return FINALE for level 5', () => {
@@ -210,8 +210,8 @@ describe('Intermission', () => {
   });
 
   describe('SCENE_DURATION', () => {
-    it('should be 180 frames (3 seconds at 60fps)', () => {
-      expect(Intermission.SCENE_DURATION).toBe(180);
+    it('should be 300 frames (5 seconds at 60fps)', () => {
+      expect(Intermission.SCENE_DURATION).toBe(300);
     });
   });
 

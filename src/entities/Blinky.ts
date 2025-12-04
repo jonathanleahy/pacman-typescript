@@ -31,7 +31,7 @@
 import { Ghost, GhostConfig } from './Ghost';
 import { TilePosition } from '../types';
 import { PacMan } from './PacMan';
-import { Colors, GhostMode } from '../constants';
+import { Colors, GhostMode, GHOST_SPEED } from '../constants';
 import { SCATTER_TARGETS, START_POSITIONS } from '../utils/MazeData';
 
 /**
@@ -89,17 +89,58 @@ export class Blinky extends Ghost {
    *
    * Elroy levels:
    * - 0: Normal behavior
-   * - 1: Faster, continues chasing during scatter
-   * - 2: Even faster
+   * - 1: Faster (~5% speed increase), continues chasing during scatter
+   * - 2: Even faster (~10% speed increase)
    *
    * @param level - Elroy level (0, 1, or 2)
    */
   setCruiseElroy(level: number): void {
+    const prevLevel = this.cruiseElroyLevel;
     this.cruiseElroyLevel = Math.min(2, Math.max(0, level));
 
-    // TODO: Implement speed boost based on level
-    // Level 1: ~5% speed increase
-    // Level 2: ~10% speed increase
+    // Apply speed boost based on level
+    if (this.cruiseElroyLevel !== prevLevel) {
+      if (this.cruiseElroyLevel === 2) {
+        this.speed = GHOST_SPEED * 1.10; // 10% faster
+      } else if (this.cruiseElroyLevel === 1) {
+        this.speed = GHOST_SPEED * 1.05; // 5% faster
+      } else {
+        this.speed = GHOST_SPEED;
+      }
+    }
+  }
+
+  /**
+   * Check and update Elroy mode based on pellets remaining
+   * Called from Game.ts during gameplay
+   *
+   * Level 1 thresholds (pellets remaining):
+   * - Elroy 1: 20 pellets
+   * - Elroy 2: 10 pellets
+   */
+  updateElroyMode(pelletsRemaining: number, level: number): void {
+    // Thresholds increase slightly per level
+    const elroy1Threshold = 20 + (level - 1) * 2;
+    const elroy2Threshold = 10 + (level - 1);
+
+    if (pelletsRemaining <= elroy2Threshold) {
+      this.setCruiseElroy(2);
+    } else if (pelletsRemaining <= elroy1Threshold) {
+      this.setCruiseElroy(1);
+    } else {
+      this.setCruiseElroy(0);
+    }
+  }
+
+  /**
+   * In Elroy mode, Blinky ignores scatter and keeps chasing
+   */
+  override setMode(mode: typeof GhostMode[keyof typeof GhostMode], frightenedDuration?: number): void {
+    // In Elroy mode, ignore scatter and stay in chase
+    if (this.cruiseElroyLevel > 0 && mode === GhostMode.SCATTER) {
+      return; // Stay in current mode (chase)
+    }
+    super.setMode(mode, frightenedDuration);
   }
 
   /**

@@ -1146,223 +1146,96 @@ export class WebGLRenderer {
     if (text) text.remove();
   }
 
-  private gameWonAnimFrame: number = 0;
-
   /**
-   * Render epic "YOU WIN!" celebration screen
+   * Render epic 2025 victory screen
    */
-  renderGameWonText(): void {
-    this.gameWonAnimFrame++;
+  renderGameWonText(score?: number): void {
+    const existing = document.getElementById('victory-overlay');
+    if (!existing) {
+      const overlay = document.createElement('div');
+      overlay.id = 'victory-overlay';
 
-    let container = document.getElementById('gamewon-container');
-    if (!container) {
-      container = document.createElement('div');
-      container.id = 'gamewon-container';
-      container.style.cssText = `
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: radial-gradient(ellipse at center, #1a0a2e 0%, #000 70%);
-        z-index: 100;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-      `;
+      // Radial rays background
+      const rays = document.createElement('div');
+      rays.className = 'victory-rays';
+      overlay.appendChild(rays);
 
-      // Animated background stars
-      for (let i = 0; i < 50; i++) {
-        const star = document.createElement('div');
-        star.className = 'win-star';
-        star.style.cssText = `
-          position: absolute;
-          width: ${2 + Math.random() * 4}px;
-          height: ${2 + Math.random() * 4}px;
-          background: #fff;
-          border-radius: 50%;
-          left: ${Math.random() * 100}%;
-          top: ${Math.random() * 100}%;
-          animation: twinkle ${1 + Math.random() * 2}s ease-in-out infinite;
-          animation-delay: ${Math.random() * 2}s;
-          opacity: ${0.3 + Math.random() * 0.7};
-        `;
-        container.appendChild(star);
+      // Expanding rings
+      for (let i = 0; i < 3; i++) {
+        const ring = document.createElement('div');
+        ring.className = 'victory-ring';
+        ring.style.animationDelay = `${i * 0.6}s`;
+        overlay.appendChild(ring);
       }
 
-      // Main title container for animations
-      const titleWrapper = document.createElement('div');
-      titleWrapper.id = 'gamewon-title-wrapper';
-      titleWrapper.style.cssText = `
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        animation: bounceIn 0.8s ease-out;
-      `;
-
-      // Giant "YOU WIN!" text with rainbow animation
-      const text = document.createElement('div');
-      text.id = 'gamewon-text';
-      text.style.cssText = `
-        color: #00ff00;
-        font-family: 'Press Start 2P', monospace;
-        font-size: 48px;
-        z-index: 10;
-        text-shadow:
-          0 0 20px #00ff00,
-          0 0 40px #00ff00,
-          0 0 60px #00ff00,
-          0 0 80px #00ff00,
-          4px 4px 0 #005500;
-        animation: rainbowGlow 2s ease-in-out infinite, bigPulse 0.5s ease-in-out infinite;
-        letter-spacing: 8px;
-      `;
-      text.textContent = 'YOU WIN!';
-      titleWrapper.appendChild(text);
-
-      // Score display
-      const scoreDisplay = document.createElement('div');
-      scoreDisplay.id = 'gamewon-score';
-      scoreDisplay.style.cssText = `
-        color: #ffff00;
-        font-family: 'Press Start 2P', monospace;
-        font-size: 20px;
-        margin-top: 40px;
-        text-shadow: 0 0 10px #ffff00;
-        animation: fadeInUp 1s ease-out 0.5s both;
-      `;
-      titleWrapper.appendChild(scoreDisplay);
-
-      // Champion message
-      const champion = document.createElement('div');
-      champion.id = 'gamewon-champion';
-      champion.style.cssText = `
-        color: #ff00ff;
-        font-family: 'Press Start 2P', monospace;
-        font-size: 16px;
-        margin-top: 20px;
-        text-shadow: 0 0 15px #ff00ff;
-        animation: fadeInUp 1s ease-out 1s both;
-      `;
-      champion.textContent = 'CHAMPION!';
-      titleWrapper.appendChild(champion);
-
-      // Subtitle
-      const subtitle = document.createElement('div');
-      subtitle.id = 'gamewon-subtitle';
-      subtitle.style.cssText = `
-        color: #888888;
-        font-family: 'Press Start 2P', monospace;
-        font-size: 12px;
-        margin-top: 60px;
-        animation: blink 1s step-end infinite, fadeInUp 1s ease-out 1.5s both;
-      `;
-      subtitle.textContent = 'PRESS SPACE TO PLAY AGAIN';
-      titleWrapper.appendChild(subtitle);
-
-      container.appendChild(titleWrapper);
-
-      // Floating ghosts celebration
-      const ghostColors = ['#ff0000', '#ffb8ff', '#00ffff', '#ffb852'];
-      for (let i = 0; i < 4; i++) {
-        const ghost = document.createElement('div');
-        ghost.className = 'win-ghost';
-        ghost.innerHTML = `
-          <svg viewBox="0 0 24 28" width="40" height="48">
-            <path fill="${ghostColors[i]}" d="M12 0C6 0 1 5 1 11v13l3-4 3 4 3-4 3 4 3-4 3 4V11c0-6-5-11-11-11z"/>
-            <circle fill="white" cx="8" cy="10" r="3"/>
-            <circle fill="white" cx="16" cy="10" r="3"/>
-            <circle fill="blue" cx="9" cy="10" r="1.5"/>
-            <circle fill="blue" cx="17" cy="10" r="1.5"/>
-          </svg>
-        `;
-        ghost.style.cssText = `
-          position: absolute;
-          left: ${10 + i * 22}%;
-          bottom: -60px;
-          animation: floatUp 4s ease-out ${i * 0.3}s infinite;
-          filter: drop-shadow(0 0 10px ${ghostColors[i]});
-        `;
-        container.appendChild(ghost);
+      // Fireworks
+      const fireworkColors = ['#ff0000', '#ffff00', '#00ff00', '#00ffff', '#ff00ff', '#ff8800'];
+      for (let i = 0; i < 8; i++) {
+        const firework = document.createElement('div');
+        firework.className = 'firework';
+        firework.style.color = fireworkColors[i % fireworkColors.length];
+        firework.style.left = `${10 + Math.random() * 80}%`;
+        firework.style.top = `${10 + Math.random() * 80}%`;
+        firework.style.animationDelay = `${Math.random() * 2}s`;
+        overlay.appendChild(firework);
       }
 
-      // Confetti elements
+      // Confetti
+      const confettiColors = ['#ff0000', '#ffff00', '#00ff00', '#00ffff', '#ff00ff', '#ff8800', '#ffffff'];
       for (let i = 0; i < 30; i++) {
         const confetti = document.createElement('div');
-        confetti.className = 'win-confetti';
-        const colors = ['#ff0000', '#ffff00', '#00ff00', '#00ffff', '#ff00ff', '#ff8800'];
-        confetti.style.cssText = `
-          position: absolute;
-          width: ${5 + Math.random() * 10}px;
-          height: ${5 + Math.random() * 10}px;
-          background: ${colors[Math.floor(Math.random() * colors.length)]};
-          left: ${Math.random() * 100}%;
-          top: -20px;
-          animation: confettiFall ${3 + Math.random() * 4}s linear infinite;
-          animation-delay: ${Math.random() * 3}s;
-          transform: rotate(${Math.random() * 360}deg);
-          opacity: 0.9;
-        `;
-        container.appendChild(confetti);
+        confetti.className = 'confetti';
+        confetti.style.background = confettiColors[i % confettiColors.length];
+        confetti.style.left = `${Math.random() * 100}%`;
+        confetti.style.animationDelay = `${Math.random() * 3}s`;
+        confetti.style.animationDuration = `${2 + Math.random() * 2}s`;
+        const shapes = ['50%', '0%', '50% 0 50% 50%'];
+        confetti.style.borderRadius = shapes[Math.floor(Math.random() * shapes.length)];
+        overlay.appendChild(confetti);
       }
 
-      // Add CSS animations
-      const style = document.createElement('style');
-      style.id = 'gamewon-styles';
-      style.textContent = `
-        @keyframes rainbowGlow {
-          0% { color: #00ff00; text-shadow: 0 0 20px #00ff00, 0 0 40px #00ff00, 0 0 60px #00ff00; }
-          25% { color: #00ffff; text-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff, 0 0 60px #00ffff; }
-          50% { color: #ffff00; text-shadow: 0 0 20px #ffff00, 0 0 40px #ffff00, 0 0 60px #ffff00; }
-          75% { color: #ff00ff; text-shadow: 0 0 20px #ff00ff, 0 0 40px #ff00ff, 0 0 60px #ff00ff; }
-          100% { color: #00ff00; text-shadow: 0 0 20px #00ff00, 0 0 40px #00ff00, 0 0 60px #00ff00; }
-        }
-        @keyframes bigPulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.05); }
-        }
-        @keyframes bounceIn {
-          0% { transform: scale(0); opacity: 0; }
-          50% { transform: scale(1.2); }
-          100% { transform: scale(1); opacity: 1; }
-        }
-        @keyframes fadeInUp {
-          from { opacity: 0; transform: translateY(30px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes blink {
-          50% { opacity: 0; }
-        }
-        @keyframes twinkle {
-          0%, 100% { opacity: 0.3; transform: scale(1); }
-          50% { opacity: 1; transform: scale(1.5); }
-        }
-        @keyframes floatUp {
-          0% { transform: translateY(0); opacity: 0; }
-          10% { opacity: 1; }
-          90% { opacity: 1; }
-          100% { transform: translateY(-600px); opacity: 0; }
-        }
-        @keyframes confettiFall {
-          0% { transform: translateY(0) rotate(0deg); opacity: 1; }
-          100% { transform: translateY(600px) rotate(720deg); opacity: 0; }
-        }
-      `;
-      document.head.appendChild(style);
+      // Victory title with animated letters
+      const title = document.createElement('div');
+      title.className = 'victory-title';
+      const titleText = 'VICTORY!';
+      titleText.split('').forEach((char, i) => {
+        const letter = document.createElement('span');
+        letter.className = 'letter';
+        letter.style.setProperty('--i', i.toString());
+        letter.textContent = char;
+        title.appendChild(letter);
+      });
+      overlay.appendChild(title);
 
-      document.getElementById('game-container')?.appendChild(container);
-    }
-  }
+      // 2025 Edition badge
+      const badge = document.createElement('div');
+      badge.className = 'victory-badge';
+      badge.textContent = '2025 EDITION';
+      overlay.appendChild(badge);
 
-  /**
-   * Update game won score display
-   */
-  updateGameWonScore(score: number): void {
-    const scoreEl = document.getElementById('gamewon-score');
-    if (scoreEl) {
-      scoreEl.textContent = `FINAL SCORE: ${score.toString().padStart(8, '0')}`;
+      // Pac-Man celebration
+      const pacman = document.createElement('div');
+      pacman.className = 'victory-pacman';
+      overlay.appendChild(pacman);
+
+      // Score display
+      if (score !== undefined) {
+        const scoreDisplay = document.createElement('div');
+        scoreDisplay.className = 'victory-score';
+        scoreDisplay.innerHTML = `
+          <span class="label">FINAL SCORE</span>
+          <span class="value">${score.toLocaleString()}</span>
+        `;
+        overlay.appendChild(scoreDisplay);
+      }
+
+      // Play again prompt
+      const prompt = document.createElement('div');
+      prompt.className = 'victory-prompt';
+      prompt.textContent = 'PRESS SPACE TO PLAY AGAIN';
+      overlay.appendChild(prompt);
+
+      document.body.appendChild(overlay);
     }
   }
 
@@ -1370,11 +1243,80 @@ export class WebGLRenderer {
    * Clear game won text
    */
   clearGameWonText(): void {
-    const container = document.getElementById('gamewon-container');
-    const styles = document.getElementById('gamewon-styles');
-    if (container) container.remove();
-    if (styles) styles.remove();
-    this.gameWonAnimFrame = 0;
+    const overlay = document.getElementById('victory-overlay');
+    if (overlay) overlay.remove();
+    // Also clear old-style elements if they exist
+    const text = document.getElementById('gamewon-text');
+    const subtitle = document.getElementById('gamewon-subtitle');
+    if (text) text.remove();
+    if (subtitle) subtitle.remove();
+  }
+
+  /**
+   * Trigger maze flash animation on level complete
+   */
+  flashMaze(): void {
+    this.canvas.classList.add('level-complete');
+    setTimeout(() => {
+      this.canvas.classList.remove('level-complete');
+    }, 800); // 4 flashes at 0.2s each
+  }
+
+  /**
+   * Add fruit to history display
+   */
+  addFruitToHistory(fruitType: number): void {
+    const fruitHistory = document.getElementById('fruit-history');
+    if (!fruitHistory) return;
+
+    // Max 7 fruits shown
+    const icons = fruitHistory.querySelectorAll('.fruit-icon');
+    if (icons.length >= 7) {
+      icons[0].remove();
+    }
+
+    const icon = document.createElement('div');
+    icon.className = 'fruit-icon';
+
+    // Fruit colors based on type
+    const fruitColors = [
+      '#ff0000', // Cherry
+      '#ff6666', // Strawberry
+      '#ff8800', // Orange
+      '#ff0000', // Apple
+      '#00ff00', // Melon
+      '#00ffff', // Galaxian
+      '#ffff00', // Bell
+      '#ffffff', // Key
+    ];
+
+    icon.style.backgroundColor = fruitColors[fruitType] || '#ff0000';
+    icon.style.color = fruitColors[fruitType] || '#ff0000';
+    fruitHistory.appendChild(icon);
+  }
+
+  /**
+   * Clear fruit history (on new game)
+   */
+  clearFruitHistory(): void {
+    const fruitHistory = document.getElementById('fruit-history');
+    if (fruitHistory) {
+      fruitHistory.innerHTML = '';
+    }
+  }
+
+  /**
+   * Flash high score when beaten
+   */
+  flashHighScore(isNew: boolean): void {
+    const highScoreEl = document.getElementById('high-score');
+    if (highScoreEl) {
+      if (isNew) {
+        highScoreEl.classList.add('new-high');
+      } else {
+        highScoreEl.classList.remove('new-high');
+      }
+    }
   }
 
   /**

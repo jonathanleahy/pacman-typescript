@@ -281,53 +281,60 @@ export class Collision {
   }
 
   /**
-   * Clear all remaining pellets (for cheat code)
+   * Skip to end of level - clear all pellets except 3 adjacent ones
+   * Used for testing/cheat mode
+   * @returns The positions of the 3 remaining pellets
    */
-  clearAllPellets(): void {
-    for (let row = 0; row < this.pelletGrid.length; row++) {
-      for (let col = 0; col < this.pelletGrid[row].length; col++) {
-        this.pelletGrid[row][col] = false;
-      }
-    }
-    this.pelletsRemaining = 0;
-  }
+  skipToEndOfLevel(): Array<{ col: number; row: number }> {
+    // Find all remaining pellets
+    const pellets: Array<{ col: number; row: number }> = [];
 
-  /**
-   * Clear all pellets except for specified positions
-   * @param keepPositions - Array of [col, row] positions to keep
-   */
-  clearAllPelletsExcept(keepPositions: [number, number][]): void {
-    // Create a set for quick lookup
-    const keepSet = new Set(keepPositions.map(([col, row]) => `${col},${row}`));
-
-    let kept = 0;
-    for (let row = 0; row < this.pelletGrid.length; row++) {
-      for (let col = 0; col < this.pelletGrid[row].length; col++) {
-        const key = `${col},${row}`;
-        if (keepSet.has(key) && this.pelletGrid[row][col]) {
-          // Keep this pellet
-          kept++;
-        } else {
-          this.pelletGrid[row][col] = false;
-        }
-      }
-    }
-    this.pelletsRemaining = kept;
-  }
-
-  /**
-   * Get a random pellet position from remaining pellets
-   */
-  getRandomPelletPosition(): [number, number] | null {
-    const pellets: [number, number][] = [];
     for (let row = 0; row < this.pelletGrid.length; row++) {
       for (let col = 0; col < this.pelletGrid[row].length; col++) {
         if (this.pelletGrid[row][col]) {
-          pellets.push([col, row]);
+          pellets.push({ col, row });
         }
       }
     }
-    if (pellets.length === 0) return null;
-    return pellets[Math.floor(Math.random() * pellets.length)];
+
+    // If 3 or fewer pellets remain, do nothing
+    if (pellets.length <= 3) {
+      return pellets;
+    }
+
+    // Find 3 adjacent pellets (preferably on same row)
+    let kept: Array<{ col: number; row: number }> = [];
+
+    // Try to find 3 horizontally adjacent pellets
+    for (let row = 0; row < this.pelletGrid.length && kept.length === 0; row++) {
+      const rowPellets = pellets.filter(p => p.row === row).sort((a, b) => a.col - b.col);
+      for (let i = 0; i < rowPellets.length - 2; i++) {
+        if (rowPellets[i + 1].col === rowPellets[i].col + 1 &&
+            rowPellets[i + 2].col === rowPellets[i].col + 2) {
+          kept = [rowPellets[i], rowPellets[i + 1], rowPellets[i + 2]];
+          break;
+        }
+      }
+    }
+
+    // Fallback: just keep first 3 pellets if no adjacent found
+    if (kept.length === 0) {
+      kept = pellets.slice(0, 3);
+    }
+
+    // Clear all pellets except the kept ones
+    for (let row = 0; row < this.pelletGrid.length; row++) {
+      for (let col = 0; col < this.pelletGrid[row].length; col++) {
+        if (this.pelletGrid[row][col]) {
+          const isKept = kept.some(p => p.col === col && p.row === row);
+          if (!isKept) {
+            this.pelletGrid[row][col] = false;
+            this.pelletsRemaining--;
+          }
+        }
+      }
+    }
+
+    return kept;
   }
 }

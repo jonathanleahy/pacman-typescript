@@ -331,22 +331,43 @@ export class Game {
     if (queuedDir !== Direction.NONE) {
       this.pacman.setDirection(queuedDir);
     }
+
+    // Check for cheat code activation
+    if (this.input.isCheatActivated() && this.state === GameState.PLAYING) {
+      this.activateSkipCheat();
+    }
+  }
+
+  /**
+   * Activate skip to end of level cheat
+   */
+  private activateSkipCheat(): void {
+    const remaining = this.collision.skipToEndOfLevel();
+
+    // Update renderer to clear eaten pellets
+    for (let row = 0; row < 31; row++) {
+      for (let col = 0; col < 28; col++) {
+        const isRemaining = remaining.some(p => p.col === col && p.row === row);
+        if (!isRemaining && !this.collision.hasPellet(col, row)) {
+          this.renderer.eatPellet(col, row);
+        }
+      }
+    }
+
+    // Play a sound to confirm cheat
+    this.sound.play(SoundType.EXTRA_LIFE);
   }
 
   /**
    * Skip the current level (cheat code)
-   * Leaves 1 pellet in a random location for the player to eat
+   * Leaves 3 adjacent pellets for the player to eat
    */
   private skipLevel(): void {
     // Don't skip if already in a transition state
     if (this.state !== GameState.PLAYING) return;
 
-    // Find a random pellet location to keep
-    const randomPellet = this.collision.getRandomPelletPosition();
-    if (randomPellet) {
-      this.collision.clearAllPelletsExcept([randomPellet]);
-      this.renderer.clearAllPelletsExcept([randomPellet]);
-    }
+    // Use the existing skip implementation
+    this.activateSkipCheat();
   }
 
   /**
@@ -459,6 +480,9 @@ export class Game {
 
     // Release more ghosts based on pellets eaten
     this.checkGhostRelease();
+
+    // Update Blinky's Elroy mode
+    this.blinky.updateElroyMode(this.collision.getPelletsRemaining(), this.level);
   }
 
   /**
@@ -688,6 +712,9 @@ export class Game {
         this.fruit.position.y,
         points
       );
+
+      // Add to fruit history
+      this.renderer.addFruitToHistory(this.fruit.type);
     }
   }
 
@@ -886,11 +913,8 @@ export class Game {
   private gameWon(): void {
     this.state = GameState.GAME_WON;
     this.sound.stopAll();
-    this.renderer.renderGameWonText();
-    this.renderer.updateGameWonScore(this.score);
-
-    // Play epic victory celebration music!
     this.sound.play(SoundType.VICTORY);
+    this.renderer.renderGameWonText(this.score);
 
     // Big screen effects
     this.effects.flash({ color: [0, 1, 0, 0.5], duration: 20 });
@@ -991,9 +1015,10 @@ export class Game {
     this.stateTimer = 120; // 2 seconds
 
     this.sound.stopAll();
+    this.sound.play(SoundType.LEVEL_COMPLETE);
 
-    // Enable maze flashing animation
-    this.renderer.setMazeFlashing(true);
+    // Flash maze animation
+    this.renderer.flashMaze();
   }
 
   /**
@@ -1068,6 +1093,9 @@ export class Game {
     // Clear game over/won text
     this.renderer.clearGameOverText();
     this.renderer.clearGameWonText();
+    this.renderer.clearFruitHistory();
+    this.renderer.flashHighScore(false);
+    this.highScoreFlashing = false;
 
     // Reset game state
     this.score = 0;
@@ -1107,6 +1135,9 @@ export class Game {
     }
   }
 
+  /** Track if we've started flashing high score */
+  private highScoreFlashing: boolean = false;
+
   /**
    * Add to score
    */
@@ -1118,6 +1149,15 @@ export class Game {
       this.extraLifeAwarded = true;
       this.pacman.lives++;
       this.sound.play(SoundType.EXTRA_LIFE);
+    }
+
+    // Check for new high score
+    if (this.score > this.highScore) {
+      this.highScore = this.score;
+      if (!this.highScoreFlashing) {
+        this.highScoreFlashing = true;
+        this.renderer.flashHighScore(true);
+      }
     }
   }
 
@@ -1209,16 +1249,13 @@ export class Game {
     this.renderer.renderScore(this.score, this.highScore);
     this.renderer.renderLevel(this.level);
     this.renderer.renderLives(this.pacman.lives);
+    this.renderer.renderLevel(this.level);
 
     // Render intermission overlay if active
     if (this.state === GameState.INTERMISSION) {
       const desc = this.intermission.getSceneDescription();
-      this.renderer.renderIntermission(
-        desc.title,
-        desc.message,
-        this.intermission.getProgress(),
-        this.intermission.getSprites()
-      );
+      const sprites = this.intermission.getSprites();
+      this.renderer.renderIntermission(desc.title, desc.message, this.intermission.getProgress(), sprites);
     } else {
       this.renderer.clearIntermission();
     }
