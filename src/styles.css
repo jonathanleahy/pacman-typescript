@@ -459,6 +459,9 @@ body {
   position: relative;
   transition: opacity var(--transition-medium) ease-in;
   padding: 20px;
+  width: 100%;
+  max-width: 712px;
+  margin: 0 auto;
 }
 
 /* Black background behind game */
@@ -515,7 +518,8 @@ body {
 #header {
   display: flex;
   justify-content: space-between;
-  width: 672px;
+  width: 100%;
+  max-width: 672px;
   padding: 15px 0;
   font-size: 12px;
 }
@@ -576,6 +580,9 @@ body {
     0 0 60px rgba(0, 212, 255, 0.1),
     inset 0 0 50px rgba(0, 0, 0, 0.8);
   transition: box-shadow var(--transition-fast) ease-out;
+  width: 100%;
+  max-width: 672px;
+  height: auto;
 }
 
 /* Apply screen shake via transform */
@@ -594,7 +601,8 @@ body {
 #footer {
   display: flex;
   justify-content: space-between;
-  width: 672px;
+  width: 100%;
+  max-width: 672px;
   padding: 15px 0;
 }
 
