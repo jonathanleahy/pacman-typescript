@@ -648,16 +648,19 @@ export class WebGLRenderer {
   }
 
   /**
-   * Render the maze walls
+   * Render the maze walls with glow effect
    *
    * The maze is drawn as a series of connected lines forming the
-   * iconic Pac-Man maze pattern.
+   * iconic Pac-Man maze pattern, with a neon glow effect.
    */
   renderMaze(): void {
     const wallColor = this.hexToRGBA(this.currentMazeColor);
+    // Glow layer - same color but transparent
+    const glowColor = [wallColor[0], wallColor[1], wallColor[2], 0.2];
     const lineWidth = 2;
+    const glowWidth = 6;
 
-    // Draw each wall tile as a connected segment
+    // First pass: Draw glow layer (underneath)
     for (let row = 0; row < GRID_HEIGHT; row++) {
       for (let col = 0; col < GRID_WIDTH; col++) {
         const tile = MAZE_DATA[row]?.[col];
@@ -666,7 +669,38 @@ export class WebGLRenderer {
           const x = col * SCALED_TILE + SCALED_TILE / 2;
           const y = row * SCALED_TILE + SCALED_TILE / 2;
 
-          // Check neighbors and draw connections
+          const hasTop = this.isWall(col, row - 1);
+          const hasBottom = this.isWall(col, row + 1);
+          const hasLeft = this.isWall(col - 1, row);
+          const hasRight = this.isWall(col + 1, row);
+
+          // Draw glow connections
+          if (hasTop) {
+            this.addRect(x, y - SCALED_TILE / 4, glowWidth, SCALED_TILE / 2, glowColor);
+          }
+          if (hasBottom) {
+            this.addRect(x, y + SCALED_TILE / 4, glowWidth, SCALED_TILE / 2, glowColor);
+          }
+          if (hasLeft) {
+            this.addRect(x - SCALED_TILE / 4, y, SCALED_TILE / 2, glowWidth, glowColor);
+          }
+          if (hasRight) {
+            this.addRect(x + SCALED_TILE / 4, y, SCALED_TILE / 2, glowWidth, glowColor);
+          }
+          this.addCircle(x, y, glowWidth / 2, glowColor, 6);
+        }
+      }
+    }
+
+    // Second pass: Draw solid walls (on top)
+    for (let row = 0; row < GRID_HEIGHT; row++) {
+      for (let col = 0; col < GRID_WIDTH; col++) {
+        const tile = MAZE_DATA[row]?.[col];
+
+        if (tile === TileType.WALL) {
+          const x = col * SCALED_TILE + SCALED_TILE / 2;
+          const y = row * SCALED_TILE + SCALED_TILE / 2;
+
           const hasTop = this.isWall(col, row - 1);
           const hasBottom = this.isWall(col, row + 1);
           const hasLeft = this.isWall(col - 1, row);
@@ -689,10 +723,13 @@ export class WebGLRenderer {
           // Draw center point
           this.addCircle(x, y, lineWidth, wallColor, 6);
         } else if (tile === TileType.GHOST_DOOR) {
-          // Ghost house door (pink horizontal line)
+          // Ghost house door (pink with glow)
           const x = col * SCALED_TILE + SCALED_TILE / 2;
           const y = row * SCALED_TILE + SCALED_TILE / 2;
-          this.addRect(x, y, SCALED_TILE, 4, this.hexToRGBA('#ffb8de'));
+          const doorColor = this.hexToRGBA('#ffb8de');
+          const doorGlow = [doorColor[0], doorColor[1], doorColor[2], 0.3];
+          this.addRect(x, y, SCALED_TILE + 4, 8, doorGlow);
+          this.addRect(x, y, SCALED_TILE, 4, doorColor);
         }
       }
     }
@@ -709,10 +746,12 @@ export class WebGLRenderer {
   }
 
   /**
-   * Render all pellets
+   * Render all pellets with glow effect
    */
   renderPellets(): void {
     const pelletColor = this.hexToRGBA(Colors.PELLET);
+    // Glow color - same but more transparent
+    const glowColor = [pelletColor[0], pelletColor[1], pelletColor[2], 0.3];
 
     for (let row = 0; row < GRID_HEIGHT; row++) {
       for (let col = 0; col < GRID_WIDTH; col++) {
@@ -723,10 +762,15 @@ export class WebGLRenderer {
         const y = row * SCALED_TILE + SCALED_TILE / 2;
 
         if (tile === TileType.PELLET) {
+          // Glow behind pellet
+          this.addCircle(x, y, 5, glowColor, 8);
           // Small pellet
           this.addCircle(x, y, 2, pelletColor, 8);
         } else if (tile === TileType.POWER_PELLET && this.powerPelletVisible) {
-          // Large power pellet (only when visible during blink)
+          // Larger glow for power pellet
+          this.addCircle(x, y, 14, glowColor, 12);
+          this.addCircle(x, y, 10, [pelletColor[0], pelletColor[1], pelletColor[2], 0.5], 12);
+          // Large power pellet
           this.addCircle(x, y, 6, pelletColor, 12);
         }
       }
@@ -761,7 +805,7 @@ export class WebGLRenderer {
   }
 
   /**
-   * Render Pac-Man
+   * Render Pac-Man with glow effect
    */
   renderPacMan(
     x: number,
@@ -773,15 +817,25 @@ export class WebGLRenderer {
   ): void {
     const radius = SCALED_TILE / 2 + 4;  // Larger Pac-Man
     const color = this.hexToRGBA(Colors.PACMAN);
+    // Glow layers
+    const glowOuter = [color[0], color[1], color[2], 0.15];
+    const glowInner = [color[0], color[1], color[2], 0.3];
 
     if (isDying) {
       // Death animation - shrinking
       const progress = deathFrame / 11;
       if (progress < 1) {
         const mouthAngle = Math.PI * progress;
+        // Glow even when dying
+        this.addCircle(x, y, radius + 12, glowOuter, 20);
+        this.addCircle(x, y, radius + 6, glowInner, 20);
         this.addPacMan(x, y, radius, Direction.UP, mouthAngle, color);
       }
     } else {
+      // Outer glow
+      this.addCircle(x, y, radius + 12, glowOuter, 20);
+      // Inner glow
+      this.addCircle(x, y, radius + 6, glowInner, 20);
       // Normal animation
       const mouthOpenings = [0, 0.15, 0.35, 0.15];
       const mouthAngle = Math.PI * mouthOpenings[animationFrame % 4];
@@ -790,7 +844,7 @@ export class WebGLRenderer {
   }
 
   /**
-   * Render a ghost
+   * Render a ghost with glow effect
    */
   renderGhost(
     x: number,
@@ -811,12 +865,20 @@ export class WebGLRenderer {
         ? this.hexToRGBA(Colors.FRIGHTENED_FLASH)
         : this.hexToRGBA(Colors.FRIGHTENED);
     } else if (mode === GhostMode.EATEN) {
-      // Only draw eyes when eaten
+      // Only draw eyes when eaten - with subtle glow
+      const eyeGlow = [1, 1, 1, 0.2];
+      this.addCircle(x, y, 15, eyeGlow, 12);
       this.addGhostEyes(x, y, direction);
       return;
     } else {
       bodyColor = this.hexToRGBA(color);
     }
+
+    // Glow effect behind ghost
+    const glowOuter = [bodyColor[0], bodyColor[1], bodyColor[2], 0.15];
+    const glowInner = [bodyColor[0], bodyColor[1], bodyColor[2], 0.25];
+    this.addCircle(x, y, size / 2 + 14, glowOuter, 16);
+    this.addCircle(x, y, size / 2 + 8, glowInner, 16);
 
     // Draw ghost body
     this.addGhost(x, y, size, bodyColor, animationFrame);
