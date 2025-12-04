@@ -60,8 +60,8 @@ export class Intermission {
           sprite.x -= speed;
           sprite.animFrame = Math.floor(frame / 8) % 4;
         }
-        // Loop when off screen
-        if (sprites[0].x < -100) {
+        // Loop when LAST sprite (Clyde) is fully off screen
+        if (sprites[4].x < -60) {
           sprites[0].x = 750;
           sprites[1].x = 850;
           sprites[2].x = 920;
@@ -89,8 +89,8 @@ export class Intermission {
           sprite.x += speed;
           sprite.animFrame = Math.floor(frame / 6) % 4;
         }
-        // Loop when off screen
-        if (sprites[0].x > 800) {
+        // Loop when LAST sprite (big Pac-Man) is fully off screen
+        if (sprites[4].x > 750) {
           sprites[0].x = -100;
           sprites[1].x = -170;
           sprites[2].x = -240;
@@ -258,11 +258,14 @@ export class Intermission {
   }
 
   /**
-   * Enable keyboard skip
+   * Enable keyboard skip - only Space or Enter
    */
   private enableSkip(): void {
-    this.skipHandler = (_e: KeyboardEvent) => {
-      this.skip();
+    this.skipHandler = (e: KeyboardEvent) => {
+      // Only skip on Space or Enter, not arrow keys
+      if (e.key === ' ' || e.key === 'Enter') {
+        this.skip();
+      }
     };
     if (typeof document !== 'undefined') {
       document.addEventListener('keydown', this.skipHandler);

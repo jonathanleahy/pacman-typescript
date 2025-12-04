@@ -333,3 +333,84 @@ src/types.ts (FRUIT_APPEAR sound type)
 ```
 
 *"Each level should feel slightly different - that's what keeps players playing."*
+
+---
+
+## Feature Diary: 2025 Polish & Animations
+
+**Date**: Session 3
+**Branch**: feature/fruit-and-levels (continued)
+
+### What We Built
+
+**Animated Intermission Cutscenes**:
+- ACT I (Level 2): Ghosts chase Pac-Man across screen
+- ACT II (Level 3): Giant Pac-Man chases frightened ghosts
+- ACT III (Level 4): Celebration dance with orbiting ghosts
+- FINALE (Level 5): Victory parade with bouncing characters
+- Full sprite animation with Canvas 2D overlay on cutscene screen
+- Only Space/Enter skip (arrow keys no longer accidentally skip)
+
+**Victory Animation (Last Pellet Eaten)**:
+- Pac-Man spins 6 times with easing (fast start, slow finish)
+- 4 bouncy jumps with decay
+- Size pulsing effect
+- Confetti particle explosion
+- Screen shake and flash
+- Victory music plays
+
+**Epic "YOU WIN!" Screen (Beat Level 5)**:
+- Giant rainbow-cycling text with glow
+- Twinkling star background
+- Falling confetti particles
+- Floating ghost SVG animations
+- Final score display
+- "CHAMPION!" subtitle
+
+**UI Improvements**:
+- Level display added to header (purple theme)
+- Mute button moved to bottom-right (was overlapping high score)
+- Removed 2UP display (single player only)
+- Softer level 2 green color
+
+**Bug Fixes**:
+- Ghost eyes getting trapped: EATEN ghosts now ignore "no upward" restriction
+- Power pellets now EXTEND frighten time (was resetting)
+- Cheat code (===) places 1 random pellet instead of completing level
+- Maze flashing changed from harsh white to gentle pulsing glow
+
+### Technical Decisions
+
+**Why Canvas 2D for cutscenes instead of WebGL?**
+The cutscene sprites need rotation, scaling, and glow effects. Canvas 2D's `ctx.save()/restore()` and shadow effects are simpler for this than adding transform matrices to the WebGL shader. Performance isn't critical for 5 sprites.
+
+**Why sine wave for maze pulsing?**
+`Math.sin(timer * 0.15) * 0.5 + 0.5` gives a smooth 0-1 oscillation. Multiplying by 0.4 limits brightness boost to 40%. Much more pleasant than binary on/off flashing.
+
+**Why victory animation in Game state machine?**
+Adding `VICTORY_ANIMATION` state keeps the pattern consistent. All special sequences (dying, intermission, victory) follow the same state machine pattern.
+
+### What Went Well
+
+1. **Restoring from git history**: Found the original animated cutscenes in commit 8a2c0de and integrated them properly
+2. **CSS animations for YOU WIN**: Keyframe animations handle the complex celebration effects without JavaScript
+3. **Type safety**: Explicit `[number, number, number, number]` tuple for wall colors prevented runtime issues
+
+### Files Changed
+
+```
+index.html (level display, removed 2UP)
+src/styles.css (level styles, mute position)
+src/Game.ts (victory animation, cheat code, level display)
+src/entities/PacMan.ts (victory animation properties)
+src/entities/Ghost.ts (EATEN mode bypass no-upward)
+src/systems/Intermission.ts (full animated scenes)
+src/systems/WebGLRenderer.ts (cutscene rendering, YOU WIN screen, maze pulse)
+src/systems/Collision.ts (clearAllPelletsExcept, getRandomPelletPosition)
+src/systems/Input.ts (=== cheat code detection)
+src/systems/Sound.ts (VICTORY sound type)
+src/types.ts (VICTORY sound type)
+src/constants.ts (VICTORY_ANIMATION state)
+```
+
+*"Polish is the difference between a game and a great game."*

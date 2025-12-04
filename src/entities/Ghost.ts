@@ -326,7 +326,8 @@ export abstract class Ghost extends Entity {
       const nextRow = tile.row + vector.y;
 
       // Special case: ghosts can't go up in certain tiles (original game quirk)
-      if (dir === Direction.UP && this.isNoUpwardsTile(tile.col, tile.row)) {
+      // Exception: eaten ghosts (eyes) can go anywhere to return home
+      if (dir === Direction.UP && this.mode !== GhostMode.EATEN && this.isNoUpwardsTile(tile.col, tile.row)) {
         continue;
       }
 

@@ -29,6 +29,7 @@ import {
 } from '../constants';
 import { MAZE_DATA } from '../utils/MazeData';
 import { TileType } from '../types';
+import { CutsceneSprite } from './Intermission';
 
 /**
  * Vertex shader source code
@@ -183,6 +184,12 @@ export class WebGLRenderer {
   /** Current game level for theming */
   private currentLevel: number = 1;
 
+  /** Whether maze should flash (level complete) */
+  private mazeFlashing: boolean = false;
+
+  /** Timer for maze flashing animation */
+  private mazeFlashTimer: number = 0;
+
   /** Level theme configurations */
   private readonly levelThemes = {
     // Level 1: Classic Blue - The original arcade look
@@ -196,16 +203,16 @@ export class WebGLRenderer {
       doorColor: [1.0, 0.72, 0.87, 1.0],       // Pink
       doorGlow: [0.6, 0.45, 0.55, 0.5],
     },
-    // Level 2: Neon Green - Cyber/Matrix theme
+    // Level 2: Forest Green - Softer, more retro green
     2: {
-      name: 'Neon Green',
-      wallColor: [0.0, 0.8, 0.2, 1.0],         // Bright green
-      wallGlow: [0.0, 0.4, 0.1, 1.0],
-      wallHighlight: [0.4, 1.0, 0.5, 1.0],
+      name: 'Forest Green',
+      wallColor: [0.15, 0.55, 0.35, 1.0],      // Softer forest green
+      wallGlow: [0.08, 0.3, 0.18, 1.0],
+      wallHighlight: [0.3, 0.7, 0.45, 1.0],
       floorColor1: [0.01, 0.04, 0.02, 1.0],
       floorColor2: [0.02, 0.06, 0.03, 1.0],
-      doorColor: [0.8, 1.0, 0.2, 1.0],         // Yellow-green
-      doorGlow: [0.4, 0.6, 0.1, 0.5],
+      doorColor: [0.6, 0.8, 0.3, 1.0],         // Muted yellow-green
+      doorGlow: [0.3, 0.5, 0.15, 0.5],
     },
     // Level 3: Muted Red - Softer danger zone
     3: {
@@ -390,6 +397,25 @@ export class WebGLRenderer {
   }
 
   /**
+   * Enable/disable maze flashing (for level complete)
+   */
+  setMazeFlashing(enabled: boolean): void {
+    this.mazeFlashing = enabled;
+    if (enabled) {
+      this.mazeFlashTimer = 0;
+    }
+  }
+
+  /**
+   * Update maze flash timer (call each frame during level complete)
+   */
+  updateMazeFlash(): void {
+    if (this.mazeFlashing) {
+      this.mazeFlashTimer++;
+    }
+  }
+
+  /**
    * Get the current level's theme, cycling through themes for levels > 3
    */
   private getTheme() {
@@ -526,7 +552,8 @@ export class WebGLRenderer {
     radius: number,
     direction: number,
     mouthAngle: number,
-    color: number[]
+    color: number[],
+    extraRotation: number = 0
   ): void {
     // Calculate rotation based on direction
     let rotation = 0;
@@ -536,6 +563,8 @@ export class WebGLRenderer {
       case Direction.LEFT: rotation = Math.PI; break;
       case Direction.UP: rotation = -Math.PI / 2; break;
     }
+    // Add extra rotation for victory spin
+    rotation += extraRotation;
 
     // Draw circle segments, skipping the mouth area
     const segments = 20;
@@ -705,83 +734,35 @@ export class WebGLRenderer {
   }
 
   /**
-   * Render the floor with subtle grid pattern based on current theme
-   */
-  renderFloor(): void {
-    const theme = this.getTheme();
-    const floorColor = [...theme.floorColor1];
-    const gridColor = [...theme.floorColor2];
-
-    // Draw floor tiles with alternating pattern
-    for (let row = 0; row < GRID_HEIGHT; row++) {
-      for (let col = 0; col < GRID_WIDTH; col++) {
-        const tile = MAZE_DATA[row]?.[col];
-        // Only draw floor for walkable areas
-        if (tile !== TileType.WALL) {
-          const x = col * SCALED_TILE + SCALED_TILE / 2;
-          const y = row * SCALED_TILE + SCALED_TILE / 2;
-          const color = (row + col) % 2 === 0 ? floorColor : gridColor;
-          this.addRect(x, y, SCALED_TILE, SCALED_TILE, color);
-        }
-      }
-    }
-  }
-
-  /**
    * Render the maze walls
    *
-   * The maze is drawn with thick, glowing walls in the iconic Pac-Man style.
-   * Walls have a main color with a lighter inner edge for depth.
-   * Colors are based on the current level's theme.
+   * Clean retro style - solid walls with level-based theming.
    */
   renderMaze(): void {
-    // First render the floor
-    this.renderFloor();
-
     // Get theme colors for current level
     const theme = this.getTheme();
-    const wallColor = [...theme.wallColor];
-    const wallGlow = [...theme.wallGlow];
-    const wallHighlight = [...theme.wallHighlight];
+    let wallColor: [number, number, number, number] = [
+      theme.wallColor[0],
+      theme.wallColor[1],
+      theme.wallColor[2],
+      theme.wallColor[3]
+    ];
     const doorColor = [...theme.doorColor];
-    const doorGlow = [...theme.doorGlow];
-    const lineWidth = 4;  // Thicker walls
-    const glowWidth = 8;  // Glow around walls
+    const lineWidth = 2;
 
-    // First pass: Draw glow layer
-    for (let row = 0; row < GRID_HEIGHT; row++) {
-      for (let col = 0; col < GRID_WIDTH; col++) {
-        const tile = MAZE_DATA[row]?.[col];
-
-        if (tile === TileType.WALL) {
-          const x = col * SCALED_TILE + SCALED_TILE / 2;
-          const y = row * SCALED_TILE + SCALED_TILE / 2;
-
-          const hasTop = this.isWall(col, row - 1);
-          const hasBottom = this.isWall(col, row + 1);
-          const hasLeft = this.isWall(col - 1, row);
-          const hasRight = this.isWall(col + 1, row);
-
-          // Draw glow connections
-          if (hasTop) {
-            this.addRect(x, y - SCALED_TILE / 4, glowWidth, SCALED_TILE / 2 + 2, wallGlow);
-          }
-          if (hasBottom) {
-            this.addRect(x, y + SCALED_TILE / 4, glowWidth, SCALED_TILE / 2 + 2, wallGlow);
-          }
-          if (hasLeft) {
-            this.addRect(x - SCALED_TILE / 4, y, SCALED_TILE / 2 + 2, glowWidth, wallGlow);
-          }
-          if (hasRight) {
-            this.addRect(x + SCALED_TILE / 4, y, SCALED_TILE / 2 + 2, glowWidth, wallGlow);
-          }
-          // Glow center
-          this.addCircle(x, y, glowWidth / 2, wallGlow, 8);
-        }
-      }
+    // Gentle pulse effect during level complete (no harsh flashing)
+    if (this.mazeFlashing) {
+      // Smooth sine wave pulse - brightens walls gently
+      const pulse = Math.sin(this.mazeFlashTimer * 0.15) * 0.5 + 0.5;
+      const brighten = pulse * 0.4; // Max 40% brighter
+      wallColor = [
+        Math.min(1, wallColor[0] + brighten),
+        Math.min(1, wallColor[1] + brighten),
+        Math.min(1, wallColor[2] + brighten),
+        1.0
+      ];
     }
 
-    // Second pass: Draw main wall lines
     for (let row = 0; row < GRID_HEIGHT; row++) {
       for (let col = 0; col < GRID_WIDTH; col++) {
         const tile = MAZE_DATA[row]?.[col];
@@ -809,47 +790,13 @@ export class WebGLRenderer {
             this.addRect(x + SCALED_TILE / 4, y, SCALED_TILE / 2, lineWidth, wallColor);
           }
 
-          // Draw rounded corner/junction
-          this.addCircle(x, y, lineWidth / 2, wallColor, 8);
+          // Draw center point
+          this.addCircle(x, y, lineWidth, wallColor, 6);
         } else if (tile === TileType.GHOST_DOOR) {
-          // Ghost house door with glow (themed)
+          // Ghost house door (themed)
           const x = col * SCALED_TILE + SCALED_TILE / 2;
           const y = row * SCALED_TILE + SCALED_TILE / 2;
-          // Glow
-          this.addRect(x, y, SCALED_TILE + 2, 8, doorGlow);
-          // Door
           this.addRect(x, y, SCALED_TILE, 4, doorColor);
-        }
-      }
-    }
-
-    // Third pass: Draw inner highlights for 3D effect
-    for (let row = 0; row < GRID_HEIGHT; row++) {
-      for (let col = 0; col < GRID_WIDTH; col++) {
-        const tile = MAZE_DATA[row]?.[col];
-
-        if (tile === TileType.WALL) {
-          const x = col * SCALED_TILE + SCALED_TILE / 2;
-          const y = row * SCALED_TILE + SCALED_TILE / 2;
-
-          const hasTop = this.isWall(col, row - 1);
-          const hasBottom = this.isWall(col, row + 1);
-          const hasLeft = this.isWall(col - 1, row);
-          const hasRight = this.isWall(col + 1, row);
-
-          // Draw thin highlight on top/left edges
-          if (hasTop) {
-            this.addRect(x - 1, y - SCALED_TILE / 4, 1, SCALED_TILE / 2, wallHighlight);
-          }
-          if (hasBottom) {
-            this.addRect(x - 1, y + SCALED_TILE / 4, 1, SCALED_TILE / 2, wallHighlight);
-          }
-          if (hasLeft) {
-            this.addRect(x - SCALED_TILE / 4, y - 1, SCALED_TILE / 2, 1, wallHighlight);
-          }
-          if (hasRight) {
-            this.addRect(x + SCALED_TILE / 4, y - 1, SCALED_TILE / 2, 1, wallHighlight);
-          }
         }
       }
     }
@@ -870,8 +817,6 @@ export class WebGLRenderer {
    */
   renderPellets(): void {
     const pelletColor = this.hexToRGBA(Colors.PELLET);
-    // Very subtle glow
-    const glowColor = [pelletColor[0], pelletColor[1], pelletColor[2], 0.15];
 
     for (let row = 0; row < GRID_HEIGHT; row++) {
       for (let col = 0; col < GRID_WIDTH; col++) {
@@ -882,13 +827,9 @@ export class WebGLRenderer {
         const y = row * SCALED_TILE + SCALED_TILE / 2;
 
         if (tile === TileType.PELLET) {
-          // Subtle glow behind pellet
-          this.addCircle(x, y, 4, glowColor, 8);
           // Small pellet
           this.addCircle(x, y, 2, pelletColor, 8);
         } else if (tile === TileType.POWER_PELLET && this.powerPelletVisible) {
-          // Subtle glow for power pellet
-          this.addCircle(x, y, 12, glowColor, 12);
           // Large power pellet
           this.addCircle(x, y, 6, pelletColor, 12);
         }
@@ -924,6 +865,34 @@ export class WebGLRenderer {
   }
 
   /**
+   * Clear all pellets (for cheat code)
+   */
+  clearAllPellets(): void {
+    for (let row = 0; row < this.pelletState.length; row++) {
+      for (let col = 0; col < this.pelletState[row].length; col++) {
+        this.pelletState[row][col] = false;
+      }
+    }
+  }
+
+  /**
+   * Clear all pellets except for specified positions
+   * @param keepPositions - Array of [col, row] positions to keep
+   */
+  clearAllPelletsExcept(keepPositions: [number, number][]): void {
+    const keepSet = new Set(keepPositions.map(([col, row]) => `${col},${row}`));
+
+    for (let row = 0; row < this.pelletState.length; row++) {
+      for (let col = 0; col < this.pelletState[row].length; col++) {
+        const key = `${col},${row}`;
+        if (!keepSet.has(key)) {
+          this.pelletState[row][col] = false;
+        }
+      }
+    }
+  }
+
+  /**
    * Render Pac-Man with glow effect
    */
   renderPacMan(
@@ -932,34 +901,41 @@ export class WebGLRenderer {
     direction: number,
     animationFrame: number,
     isDying: boolean = false,
-    deathFrame: number = 0
+    deathFrame: number = 0,
+    isVictory: boolean = false,
+    victoryRotation: number = 0,
+    victoryJump: number = 0
   ): void {
     const radius = SCALED_TILE / 2 + 4;  // Larger Pac-Man
     const color = this.hexToRGBA(Colors.PACMAN);
+
+    // Apply victory jump offset
+    const renderY = isVictory ? y - victoryJump : y;
 
     if (isDying) {
       // Death animation - shrinking
       const progress = deathFrame / 11;
       if (progress < 1) {
         const mouthAngle = Math.PI * progress;
-        // Soft multi-layer glow
-        this.addCircle(x, y, radius + 14, [color[0], color[1], color[2], 0.04], 16);
-        this.addCircle(x, y, radius + 8, [color[0], color[1], color[2], 0.06], 16);
-        this.addPacMan(x, y, radius, Direction.UP, mouthAngle, color);
+        this.addPacMan(x, renderY, radius, Direction.UP, mouthAngle, color, victoryRotation);
       }
+    } else if (isVictory) {
+      // Victory animation - spinning with EXCITED fast chomping!
+      // Rapid mouth animation - chomps 8x faster than normal
+      const victoryMouthOpenings = [0.1, 0.4, 0.1, 0.4];
+      const fastFrame = Math.floor(animationFrame * 2) % 4;
+      const mouthAngle = Math.PI * victoryMouthOpenings[fastFrame];
+      this.addPacMan(x, renderY, radius * 1, Direction.RIGHT, mouthAngle, color, victoryRotation);
     } else {
-      // Soft multi-layer glow
-      this.addCircle(x, y, radius + 14, [color[0], color[1], color[2], 0.04], 16);
-      this.addCircle(x, y, radius + 8, [color[0], color[1], color[2], 0.06], 16);
       // Normal animation
       const mouthOpenings = [0, 0.15, 0.35, 0.15];
       const mouthAngle = Math.PI * mouthOpenings[animationFrame % 4];
-      this.addPacMan(x, y, radius, direction, mouthAngle, color);
+      this.addPacMan(x, renderY, radius, direction, mouthAngle, color);
     }
   }
 
   /**
-   * Render a ghost with glow effect
+   * Render a ghost
    */
   renderGhost(
     x: number,
@@ -980,19 +956,12 @@ export class WebGLRenderer {
         ? this.hexToRGBA(Colors.FRIGHTENED_FLASH)
         : this.hexToRGBA(Colors.FRIGHTENED);
     } else if (mode === GhostMode.EATEN) {
-      // Only draw eyes when eaten - with subtle glow
-      const eyeGlow = [1, 1, 1, 0.2];
-      this.addCircle(x, y, 15, eyeGlow, 12);
+      // Only draw eyes when eaten
       this.addGhostEyes(x, y, direction);
       return;
     } else {
       bodyColor = this.hexToRGBA(color);
     }
-
-    // Soft glow effect - multiple layers for blur-like effect
-    this.addCircle(x, y, size / 2 + 16, [bodyColor[0], bodyColor[1], bodyColor[2], 0.04], 16);
-    this.addCircle(x, y, size / 2 + 10, [bodyColor[0], bodyColor[1], bodyColor[2], 0.06], 16);
-    this.addCircle(x, y, size / 2 + 5, [bodyColor[0], bodyColor[1], bodyColor[2], 0.08], 16);
 
     // Draw ghost body
     this.addGhost(x, y, size, bodyColor, animationFrame);
@@ -1021,6 +990,16 @@ export class WebGLRenderer {
     }
     if (highScoreEl) {
       highScoreEl.textContent = highScore.toString().padStart(2, '0');
+    }
+  }
+
+  /**
+   * Render current level display
+   */
+  renderLevel(level: number): void {
+    const levelEl = document.getElementById('level');
+    if (levelEl) {
+      levelEl.textContent = level.toString();
     }
   }
 
@@ -1284,16 +1263,6 @@ export class WebGLRenderer {
   }
 
   /**
-   * Update level indicator display
-   */
-  renderLevel(level: number): void {
-    const levelEl = document.getElementById('level');
-    if (levelEl) {
-      levelEl.textContent = level.toString();
-    }
-  }
-
-  /**
    * Add fruit to history display
    */
   addFruitToHistory(fruitType: number): void {
@@ -1353,16 +1322,7 @@ export class WebGLRenderer {
   /**
    * Render intermission screen with animated cutscene
    */
-  renderIntermission(title: string, message: string, progress: number, sprites?: Array<{
-    x: number;
-    y: number;
-    type: 'pacman' | 'ghost' | 'bigpacman';
-    color?: string;
-    direction: number;
-    scale: number;
-    frightened?: boolean;
-    animFrame: number;
-  }>): void {
+  renderIntermission(title: string, message: string, progress: number, sprites?: CutsceneSprite[]): void {
     let container = document.getElementById('intermission-container');
     if (!container) {
       container = document.createElement('div');
@@ -1424,10 +1384,10 @@ export class WebGLRenderer {
         color: #666666;
         font-family: 'Press Start 2P', monospace;
         font-size: 10px;
-        margin-top: auto;
-        margin-bottom: 40px;
+        position: absolute;
+        bottom: 40px;
       `;
-      skipEl.textContent = 'PRESS ANY KEY TO SKIP';
+      skipEl.textContent = 'PRESS SPACE TO SKIP';
       container.appendChild(skipEl);
 
       document.getElementById('game-container')?.appendChild(container);
@@ -1439,13 +1399,12 @@ export class WebGLRenderer {
     if (titleEl) titleEl.textContent = title;
     if (messageEl) messageEl.textContent = message;
 
-    // Render animated sprites on cutscene canvas
-    const cutsceneCanvas = document.getElementById('cutscene-canvas') as HTMLCanvasElement;
-    if (cutsceneCanvas && sprites) {
-      const ctx = cutsceneCanvas.getContext('2d');
+    // Render sprites on canvas
+    const canvas = document.getElementById('cutscene-canvas') as HTMLCanvasElement;
+    if (canvas && sprites && sprites.length > 0) {
+      const ctx = canvas.getContext('2d');
       if (ctx) {
-        ctx.clearRect(0, 0, cutsceneCanvas.width, cutsceneCanvas.height);
-
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
         for (const sprite of sprites) {
           this.renderCutsceneSprite(ctx, sprite);
         }
@@ -1465,16 +1424,7 @@ export class WebGLRenderer {
   /**
    * Render a single cutscene sprite on canvas
    */
-  private renderCutsceneSprite(ctx: CanvasRenderingContext2D, sprite: {
-    x: number;
-    y: number;
-    type: 'pacman' | 'ghost' | 'bigpacman';
-    color?: string;
-    direction: number;
-    scale: number;
-    frightened?: boolean;
-    animFrame: number;
-  }): void {
+  private renderCutsceneSprite(ctx: CanvasRenderingContext2D, sprite: CutsceneSprite): void {
     ctx.save();
     ctx.translate(sprite.x, sprite.y);
 

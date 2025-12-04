@@ -121,6 +121,7 @@ export const GameState = {
   PLAYING: 'playing',
   DYING: 'dying',
   GAME_OVER: 'game_over',
+  VICTORY_ANIMATION: 'victory_animation',
   LEVEL_COMPLETE: 'level_complete',
   INTERMISSION: 'intermission',
   GAME_WON: 'game_won',
