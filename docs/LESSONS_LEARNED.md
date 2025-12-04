@@ -261,3 +261,75 @@ This session demonstrated that **TDD + Specification + Diary** creates a powerfu
 ---
 
 *"The best code is code you understand three months later."*
+
+---
+
+## Feature Diary: Fruit & Level Progression
+
+**Date**: Session 2
+**Branch**: feature/fruit-and-levels
+
+### What We Built
+
+**Fruit System**:
+- Bonus items spawn at 70 and 170 pellets eaten (per level)
+- 8 fruit types: Cherry, Strawberry, Orange, Apple, Melon, Galaxian, Bell, Key
+- Each type has different point values (100 to 5000 points)
+- Fruits despawn after 10 seconds if not collected
+- Distinctive WebGL rendering for each fruit type
+
+**Level Progression**:
+- 21 unique level configurations based on original arcade
+- Speed increases: ghosts and Pac-Man get faster each level
+- Frightened duration decreases: 6 seconds on level 1, down to 0 on level 19+
+- Maze colors cycle through 8 different palettes
+- Elroy mode: Blinky gets speed boost when few pellets remain
+
+### Technical Decisions
+
+**Why static `getFruitTypeForLevel()`?**
+This is a pure function - given a level, return a fruit type. No need for instance state. Makes testing trivial and allows both Fruit and LevelConfig to use the same logic.
+
+**Why separate LevelConfig from Game?**
+Keeps configuration data pure and testable. The Game class stays focused on orchestration while LevelConfig handles the "what changes per level" data.
+
+**Why 21 levels?**
+Original Pac-Man had distinct configurations through level 21, then values capped. We follow the same pattern for authenticity.
+
+### TDD Stats
+
+- 50 new tests added (27 Fruit + 23 LevelConfig)
+- Total: 279 tests passing
+- Zero regressions in existing code
+
+### What Went Well
+
+1. **Test-first fruit types**: Writing tests for getFruitTypeForLevel() documented the exact progression before implementation
+2. **Color cycling**: Simple modulo operation (`level % 8`) gives infinite variety
+3. **WebGL fruit sprites**: Each fruit has a distinctive look using primitive shapes
+
+### Interesting Bug Found
+
+Tile position calculation for fruit spawn was off by one:
+```typescript
+// Bug: Expected tile 13, got 14
+// Fix: Math.floor(position.x / SCALED_TILE) is correct
+// The spawn position (13.5 * SCALED_TILE + SCALED_TILE/2) floors to 14
+```
+
+Lesson: Test the actual game math, not assumptions about the math.
+
+### Files Changed
+
+```
+src/entities/Fruit.ts (new)
+src/systems/LevelConfig.ts (new)
+tests/entities/Fruit.test.ts (new)
+tests/systems/LevelConfig.test.ts (new)
+src/Game.ts (fruit integration)
+src/systems/WebGLRenderer.ts (fruit rendering, maze color)
+src/systems/Sound.ts (fruit appear sound)
+src/types.ts (FRUIT_APPEAR sound type)
+```
+
+*"Each level should feel slightly different - that's what keeps players playing."*

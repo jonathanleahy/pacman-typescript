@@ -654,7 +654,7 @@ export class WebGLRenderer {
    * iconic Pac-Man maze pattern.
    */
   renderMaze(): void {
-    const wallColor = this.hexToRGBA(Colors.MAZE_WALL);
+    const wallColor = this.hexToRGBA(this.currentMazeColor);
     const lineWidth = 2;
 
     // Draw each wall tile as a connected segment
@@ -864,6 +864,68 @@ export class WebGLRenderer {
   }
 
   /**
+   * Render a fruit bonus item
+   */
+  renderFruit(x: number, y: number, color: string, fruitType: number): void {
+    const fruitColor = this.hexToRGBA(color);
+    const size = 8; // Slightly larger than pellets
+
+    // Draw based on fruit type for variety
+    switch (fruitType) {
+      case 0: // Cherry - two circles with stem
+        this.addCircle(x - 4, y + 2, size - 2, fruitColor, 10);
+        this.addCircle(x + 4, y + 2, size - 2, fruitColor, 10);
+        // Stem
+        this.addRect(x, y - 6, 2, 8, [0.4, 0.26, 0.13, 1]);
+        break;
+      case 1: // Strawberry - triangular shape
+        this.addCircle(x, y + 2, size, fruitColor, 12);
+        this.addCircle(x, y - 3, size - 3, fruitColor, 8);
+        // Seeds (white dots)
+        this.addCircle(x - 3, y + 1, 1, [1, 1, 1, 1], 4);
+        this.addCircle(x + 3, y + 1, 1, [1, 1, 1, 1], 4);
+        this.addCircle(x, y + 4, 1, [1, 1, 1, 1], 4);
+        break;
+      case 2: // Orange - simple circle with leaf
+        this.addCircle(x, y, size + 1, fruitColor, 14);
+        this.addCircle(x + 2, y - 7, 3, [0, 0.8, 0, 1], 6); // Leaf
+        break;
+      case 3: // Apple - red with stem
+        this.addCircle(x, y, size + 1, fruitColor, 14);
+        this.addRect(x, y - 8, 2, 4, [0.4, 0.26, 0.13, 1]); // Stem
+        this.addCircle(x + 3, y - 6, 2, [0, 0.8, 0, 1], 5); // Leaf
+        break;
+      case 4: // Melon - large oval
+        this.addCircle(x, y, size + 2, fruitColor, 16);
+        // Stripes
+        this.addRect(x - 4, y, 1, 8, [0, 0.6, 0, 1]);
+        this.addRect(x, y, 1, 10, [0, 0.6, 0, 1]);
+        this.addRect(x + 4, y, 1, 8, [0, 0.6, 0, 1]);
+        break;
+      case 5: // Galaxian - spaceship shape
+        this.addCircle(x, y - 2, size - 2, fruitColor, 8);
+        this.addRect(x, y + 4, 10, 4, fruitColor);
+        this.addRect(x - 6, y + 2, 4, 6, fruitColor);
+        this.addRect(x + 6, y + 2, 4, 6, fruitColor);
+        break;
+      case 6: // Bell - bell shape
+        this.addCircle(x, y - 2, size, fruitColor, 12);
+        this.addRect(x, y + 4, 12, 4, fruitColor);
+        this.addCircle(x, y + 8, 3, fruitColor, 6);
+        break;
+      case 7: // Key
+        this.addCircle(x, y - 4, size - 2, fruitColor, 10);
+        this.addRect(x, y + 2, 4, 10, fruitColor);
+        this.addRect(x + 3, y + 4, 4, 2, fruitColor);
+        this.addRect(x + 3, y + 8, 4, 2, fruitColor);
+        break;
+      default:
+        // Fallback: simple circle
+        this.addCircle(x, y, size, fruitColor, 12);
+    }
+  }
+
+  /**
    * Render "READY!" text
    * Uses Canvas 2D for text (WebGL text is complex)
    */
@@ -930,21 +992,6 @@ export class WebGLRenderer {
   }
 
   /**
-   * Render fruit
-   */
-  renderFruit(x: number, y: number, type: number): void {
-    const fruitColors = ['#f00', '#f00', '#ffa500', '#f00', '#0f0', '#ff0', '#ff0', '#0ff'];
-    const color = this.hexToRGBA(fruitColors[type] || '#f00');
-
-    this.addCircle(x, y, 6, color, 12);
-
-    // Stem
-    if (type < 5) {
-      this.addRect(x, y - 6, 2, 4, this.hexToRGBA('#0a0'));
-    }
-  }
-
-  /**
    * Render ghost score popup
    */
   renderGhostScore(x: number, y: number, score: number): void {
@@ -966,6 +1013,39 @@ export class WebGLRenderer {
 
     setTimeout(() => popup.remove(), 1000);
   }
+
+  /**
+   * Render fruit score popup
+   */
+  renderFruitScore(x: number, y: number, score: number): void {
+    const popup = document.createElement('div');
+    popup.className = 'fruit-score-popup';
+    popup.style.cssText = `
+      position: absolute;
+      left: ${x - 20}px;
+      top: ${y - 10}px;
+      color: #ff0;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 10px;
+      z-index: 20;
+      animation: fadeUp 1.5s ease-out forwards;
+      text-shadow: 0 0 5px #ff0;
+    `;
+    popup.textContent = score.toString();
+    document.getElementById('game-container')?.appendChild(popup);
+
+    setTimeout(() => popup.remove(), 1500);
+  }
+
+  /**
+   * Set maze wall color (for level progression)
+   */
+  setMazeColor(color: string): void {
+    // Update the maze color constant for re-rendering
+    this.currentMazeColor = color;
+  }
+
+  private currentMazeColor: string = '#2121de';
 
   /**
    * Render particles from a ParticleSystem

@@ -107,6 +107,7 @@ export enum SoundType {
   MUNCH_2 = 'munch2',
   EAT_GHOST = 'eatGhost',
   EAT_FRUIT = 'eatFruit',
+  FRUIT_APPEAR = 'fruitAppear',
   DEATH = 'death',
   INTRO = 'intro',
   SIREN_1 = 'siren1',

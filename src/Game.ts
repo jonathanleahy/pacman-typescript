@@ -49,6 +49,8 @@ import { Blinky } from './entities/Blinky';
 import { Pinky } from './entities/Pinky';
 import { Inky } from './entities/Inky';
 import { Clyde } from './entities/Clyde';
+import { Fruit } from './entities/Fruit';
+import { getLevelConfig, FRUIT_SPAWN_PELLETS } from './systems/LevelConfig';
 import {
   GameState,
   GameStateType,
@@ -150,6 +152,15 @@ export class Game {
 
   /** Extra life awarded flag */
   private extraLifeAwarded: boolean = false;
+
+  /** Current fruit (if any) */
+  private fruit: Fruit | null = null;
+
+  /** Track if first fruit has spawned this level */
+  private firstFruitSpawned: boolean = false;
+
+  /** Track if second fruit has spawned this level */
+  private secondFruitSpawned: boolean = false;
 
   /**
    * Create a new game instance
@@ -348,6 +359,9 @@ export class Game {
     // Update renderer animations
     this.renderer.updatePowerPelletBlink();
 
+    // Update fruit (despawn timer and collision)
+    this.updateFruit();
+
     // Check collisions
     const collisions = this.collision.checkCollisions(this.pacman, this.ghosts);
     this.handleCollisions(collisions);
@@ -522,11 +536,72 @@ export class Game {
     const intensity = this.pelletsEaten / (this.pelletsEaten + this.collision.getPelletsRemaining());
     this.sound.updateSirenIntensity(intensity);
 
+    // Check for fruit spawn
+    this.checkFruitSpawn();
+
     // Brief slowdown while eating
     this.pacman.isEating = true;
     setTimeout(() => {
       this.pacman.isEating = false;
     }, 10);
+  }
+
+  /**
+   * Check if fruit should spawn
+   */
+  private checkFruitSpawn(): void {
+    // Don't spawn if fruit already exists
+    if (this.fruit && this.fruit.isActive()) return;
+
+    const config = getLevelConfig(this.level);
+
+    // First fruit at 70 pellets
+    if (!this.firstFruitSpawned && this.pelletsEaten >= FRUIT_SPAWN_PELLETS.FIRST) {
+      this.fruit = new Fruit(config.fruitType);
+      this.firstFruitSpawned = true;
+      this.sound.play(SoundType.FRUIT_APPEAR);
+    }
+
+    // Second fruit at 170 pellets
+    if (!this.secondFruitSpawned && this.pelletsEaten >= FRUIT_SPAWN_PELLETS.SECOND) {
+      this.fruit = new Fruit(config.fruitType);
+      this.secondFruitSpawned = true;
+      this.sound.play(SoundType.FRUIT_APPEAR);
+    }
+  }
+
+  /**
+   * Check fruit collision and update
+   */
+  private updateFruit(): void {
+    if (!this.fruit || !this.fruit.isActive()) return;
+
+    // Update despawn timer
+    this.fruit.update();
+
+    // Check collision with Pac-Man
+    const pacTile = this.pacman.getTile();
+    const fruitTile = this.fruit.getTile();
+
+    if (pacTile.col === fruitTile.col && pacTile.row === fruitTile.row) {
+      const points = this.fruit.collect();
+      this.addScore(points);
+
+      // Sound and effects
+      this.sound.play(SoundType.EAT_FRUIT);
+      this.particles.emit(
+        this.fruit.position.x,
+        this.fruit.position.y,
+        EffectPresets.POWER_PELLET_EAT
+      );
+
+      // Show score briefly
+      this.renderer.renderFruitScore(
+        this.fruit.position.x,
+        this.fruit.position.y,
+        points
+      );
+    }
   }
 
   /**
@@ -693,6 +768,15 @@ export class Game {
   private startNextLevel(): void {
     this.level++;
     this.pelletsEaten = 0;
+
+    // Reset fruit spawns for new level
+    this.fruit = null;
+    this.firstFruitSpawned = false;
+    this.secondFruitSpawned = false;
+
+    // Apply level-specific settings
+    const config = getLevelConfig(this.level);
+    this.renderer.setMazeColor(config.mazeColor);
 
     // Reset pellets
     this.collision.resetPellets();
@@ -861,6 +945,16 @@ export class Game {
             ghost.frightenedFlashing
           );
         }
+      }
+
+      // Render fruit if active
+      if (this.fruit && this.fruit.isActive()) {
+        this.renderer.renderFruit(
+          this.fruit.position.x,
+          this.fruit.position.y,
+          this.fruit.getColor(),
+          this.fruit.type
+        );
       }
     }
 

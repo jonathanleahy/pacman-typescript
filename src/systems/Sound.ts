@@ -122,6 +122,14 @@ export class Sound {
       },
     },
 
+    // Fruit appears - sparkle sound
+    [SoundType.FRUIT_APPEAR]: {
+      frequency: [440, 550, 660],
+      duration: 0.3,
+      type: 'sine',
+      volume: 0.25,
+    },
+
     // Pac-Man death - descending warble
     [SoundType.DEATH]: {
       frequency: [500, 450, 400, 350, 300, 250, 200, 150, 100],
