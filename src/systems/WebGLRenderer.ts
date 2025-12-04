@@ -180,6 +180,46 @@ export class WebGLRenderer {
   /** Timer for power pellet blinking */
   private powerPelletTimer: number = 0;
 
+  /** Current game level for theming */
+  private currentLevel: number = 1;
+
+  /** Level theme configurations */
+  private readonly levelThemes = {
+    // Level 1: Classic Blue - The original arcade look
+    1: {
+      name: 'Classic Blue',
+      wallColor: [0.13, 0.13, 0.87, 1.0],      // #2121de
+      wallGlow: [0.15, 0.15, 0.55, 1.0],
+      wallHighlight: [0.4, 0.4, 1.0, 1.0],
+      floorColor1: [0.02, 0.02, 0.05, 1.0],
+      floorColor2: [0.04, 0.04, 0.08, 1.0],
+      doorColor: [1.0, 0.72, 0.87, 1.0],       // Pink
+      doorGlow: [0.6, 0.45, 0.55, 0.5],
+    },
+    // Level 2: Neon Green - Cyber/Matrix theme
+    2: {
+      name: 'Neon Green',
+      wallColor: [0.0, 0.8, 0.2, 1.0],         // Bright green
+      wallGlow: [0.0, 0.4, 0.1, 1.0],
+      wallHighlight: [0.4, 1.0, 0.5, 1.0],
+      floorColor1: [0.01, 0.04, 0.02, 1.0],
+      floorColor2: [0.02, 0.06, 0.03, 1.0],
+      doorColor: [0.8, 1.0, 0.2, 1.0],         // Yellow-green
+      doorGlow: [0.4, 0.6, 0.1, 0.5],
+    },
+    // Level 3: Muted Red - Softer danger zone
+    3: {
+      name: 'Muted Red',
+      wallColor: [0.8, 0.27, 0.27, 1.0],       // Muted red (#cc4444)
+      wallGlow: [0.4, 0.13, 0.13, 1.0],
+      wallHighlight: [0.87, 0.47, 0.47, 1.0],
+      floorColor1: [0.04, 0.01, 0.01, 1.0],
+      floorColor2: [0.06, 0.02, 0.02, 1.0],
+      doorColor: [1.0, 0.6, 0.2, 1.0],         // Orange
+      doorGlow: [0.6, 0.3, 0.1, 0.5],
+    },
+  } as const;
+
   /**
    * Constructor - Initialize WebGL context and shaders
    *
@@ -339,6 +379,23 @@ export class WebGLRenderer {
         this.pelletState[row][col] = tile === TileType.PELLET || tile === TileType.POWER_PELLET;
       }
     }
+  }
+
+  /**
+   * Set the current level for theming
+   * @param level - Current game level (1-based)
+   */
+  setLevel(level: number): void {
+    this.currentLevel = level;
+  }
+
+  /**
+   * Get the current level's theme, cycling through themes for levels > 3
+   */
+  private getTheme() {
+    // Cycle through themes: 1->1, 2->2, 3->3, 4->1, 5->2, 6->3, etc.
+    const themeIndex = ((this.currentLevel - 1) % 3) + 1;
+    return this.levelThemes[themeIndex as 1 | 2 | 3];
   }
 
   /**
@@ -650,11 +707,13 @@ export class WebGLRenderer {
   /**
    * Render the maze walls
    *
-   * The maze is drawn as a series of connected lines forming the
-   * iconic Pac-Man maze pattern.
+   * Clean retro style - solid walls with level-based theming.
    */
   renderMaze(): void {
-    const wallColor = this.hexToRGBA(this.currentMazeColor);
+    // Get theme colors for current level
+    const theme = this.getTheme();
+    const wallColor = [...theme.wallColor];
+    const doorColor = [...theme.doorColor];
     const lineWidth = 2;
 
     for (let row = 0; row < GRID_HEIGHT; row++) {
@@ -670,7 +729,7 @@ export class WebGLRenderer {
           const hasLeft = this.isWall(col - 1, row);
           const hasRight = this.isWall(col + 1, row);
 
-          // Draw connecting lines
+          // Draw solid wall connections
           if (hasTop) {
             this.addRect(x, y - SCALED_TILE / 4, lineWidth, SCALED_TILE / 2, wallColor);
           }
@@ -687,10 +746,9 @@ export class WebGLRenderer {
           // Draw center point
           this.addCircle(x, y, lineWidth, wallColor, 6);
         } else if (tile === TileType.GHOST_DOOR) {
-          // Ghost house door (pink)
+          // Ghost house door (themed)
           const x = col * SCALED_TILE + SCALED_TILE / 2;
           const y = row * SCALED_TILE + SCALED_TILE / 2;
-          const doorColor = this.hexToRGBA('#ffb8de');
           this.addRect(x, y, SCALED_TILE, 4, doorColor);
         }
       }
@@ -708,7 +766,7 @@ export class WebGLRenderer {
   }
 
   /**
-   * Render all pellets
+   * Render all pellets with glow effect
    */
   renderPellets(): void {
     const pelletColor = this.hexToRGBA(Colors.PELLET);
@@ -789,7 +847,7 @@ export class WebGLRenderer {
   }
 
   /**
-   * Render a ghost with glow effect
+   * Render a ghost
    */
   renderGhost(
     x: number,
@@ -991,6 +1049,137 @@ export class WebGLRenderer {
   }
 
   /**
+   * Render "YOU WIN!" text for completing all levels
+   */
+  renderGameWonText(): void {
+    const existing = document.getElementById('gamewon-text');
+    if (!existing) {
+      const text = document.createElement('div');
+      text.id = 'gamewon-text';
+      text.style.cssText = `
+        position: absolute;
+        top: ${14 * SCALED_TILE}px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: #00ff00;
+        font-family: 'Press Start 2P', monospace;
+        font-size: 24px;
+        z-index: 10;
+        text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00;
+        animation: pulse 1s ease-in-out infinite;
+      `;
+      text.textContent = 'YOU WIN!';
+      document.getElementById('game-container')?.appendChild(text);
+
+      // Add subtitle
+      const subtitle = document.createElement('div');
+      subtitle.id = 'gamewon-subtitle';
+      subtitle.style.cssText = `
+        position: absolute;
+        top: ${18 * SCALED_TILE}px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: #ffff00;
+        font-family: 'Press Start 2P', monospace;
+        font-size: 12px;
+        z-index: 10;
+      `;
+      subtitle.textContent = 'PRESS SPACE TO PLAY AGAIN';
+      document.getElementById('game-container')?.appendChild(subtitle);
+    }
+  }
+
+  /**
+   * Clear game won text
+   */
+  clearGameWonText(): void {
+    const text = document.getElementById('gamewon-text');
+    const subtitle = document.getElementById('gamewon-subtitle');
+    if (text) text.remove();
+    if (subtitle) subtitle.remove();
+  }
+
+  /**
+   * Render intermission screen
+   */
+  renderIntermission(title: string, message: string, progress: number): void {
+    let container = document.getElementById('intermission-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'intermission-container';
+      container.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        background: rgba(0, 0, 0, 0.9);
+        z-index: 100;
+      `;
+
+      const titleEl = document.createElement('div');
+      titleEl.id = 'intermission-title';
+      titleEl.style.cssText = `
+        color: #00ffff;
+        font-family: 'Press Start 2P', monospace;
+        font-size: 32px;
+        margin-bottom: 20px;
+        text-shadow: 0 0 10px #00ffff;
+      `;
+      container.appendChild(titleEl);
+
+      const messageEl = document.createElement('div');
+      messageEl.id = 'intermission-message';
+      messageEl.style.cssText = `
+        color: #ffff00;
+        font-family: 'Press Start 2P', monospace;
+        font-size: 16px;
+        margin-bottom: 40px;
+      `;
+      container.appendChild(messageEl);
+
+      const skipEl = document.createElement('div');
+      skipEl.id = 'intermission-skip';
+      skipEl.style.cssText = `
+        color: #888888;
+        font-family: 'Press Start 2P', monospace;
+        font-size: 10px;
+      `;
+      skipEl.textContent = 'PRESS ANY KEY TO SKIP';
+      container.appendChild(skipEl);
+
+      document.getElementById('game-container')?.appendChild(container);
+    }
+
+    // Update content
+    const titleEl = document.getElementById('intermission-title');
+    const messageEl = document.getElementById('intermission-message');
+    if (titleEl) titleEl.textContent = title;
+    if (messageEl) messageEl.textContent = message;
+
+    // Fade effect based on progress
+    if (progress < 0.1) {
+      container.style.opacity = String(progress * 10);
+    } else if (progress > 0.9) {
+      container.style.opacity = String((1 - progress) * 10);
+    } else {
+      container.style.opacity = '1';
+    }
+  }
+
+  /**
+   * Clear intermission screen
+   */
+  clearIntermission(): void {
+    const container = document.getElementById('intermission-container');
+    if (container) container.remove();
+  }
+
+  /**
    * Render ghost score popup
    */
   renderGhostScore(x: number, y: number, score: number): void {
@@ -1035,16 +1224,6 @@ export class WebGLRenderer {
 
     setTimeout(() => popup.remove(), 1500);
   }
-
-  /**
-   * Set maze wall color (for level progression)
-   */
-  setMazeColor(color: string): void {
-    // Update the maze color constant for re-rendering
-    this.currentMazeColor = color;
-  }
-
-  private currentMazeColor: string = '#2121de';
 
   /**
    * Render particles from a ParticleSystem

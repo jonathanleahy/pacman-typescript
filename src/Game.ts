@@ -51,6 +51,7 @@ import { Inky } from './entities/Inky';
 import { Clyde } from './entities/Clyde';
 import { Fruit } from './entities/Fruit';
 import { getLevelConfig, FRUIT_SPAWN_PELLETS } from './systems/LevelConfig';
+import { Intermission } from './systems/Intermission';
 import {
   GameState,
   GameStateType,
@@ -162,6 +163,9 @@ export class Game {
   /** Track if second fruit has spawned this level */
   private secondFruitSpawned: boolean = false;
 
+  /** Intermission system for cutscenes */
+  private intermission: Intermission;
+
   /**
    * Create a new game instance
    */
@@ -175,6 +179,7 @@ export class Game {
     // Initialize 2025 visual effects systems
     this.particles = new ParticleSystem(1000); // Up to 1000 particles
     this.effects = new PostProcessingManager();
+    this.intermission = new Intermission();
 
     // Initialize entities
     this.pacman = new PacMan();
@@ -193,9 +198,56 @@ export class Game {
       this.highScore = parseInt(savedHighScore, 10);
     }
 
+    // Load sound mute preference and enable M key shortcut
+    this.sound.loadMutePreference();
+    this.sound.enableMuteShortcut();
+    this.setupMuteButton();
+
     // Initialize sound on first user interaction
     document.addEventListener('click', () => this.sound.init(), { once: true });
     document.addEventListener('keydown', () => this.sound.init(), { once: true });
+  }
+
+  /**
+   * Setup mute button click handler and initial state
+   */
+  private setupMuteButton(): void {
+    const muteBtn = document.getElementById('mute-btn');
+    const muteIcon = muteBtn?.querySelector('.mute-icon');
+
+    if (!muteBtn || !muteIcon) return;
+
+    // Set initial state
+    this.updateMuteButtonUI(muteBtn, muteIcon as HTMLElement);
+
+    // Handle click
+    muteBtn.addEventListener('click', () => {
+      this.sound.toggleMute();
+      this.updateMuteButtonUI(muteBtn, muteIcon as HTMLElement);
+    });
+
+    // Update UI when M key is pressed (sync with keyboard shortcut)
+    document.addEventListener('keydown', (e) => {
+      if (e.key.toLowerCase() === 'm') {
+        // Small delay to let sound.toggleMute() complete first
+        setTimeout(() => {
+          this.updateMuteButtonUI(muteBtn, muteIcon as HTMLElement);
+        }, 10);
+      }
+    });
+  }
+
+  /**
+   * Update mute button visual state
+   */
+  private updateMuteButtonUI(btn: HTMLElement, icon: HTMLElement): void {
+    if (this.sound.isMuted()) {
+      btn.classList.add('muted');
+      icon.textContent = '🔇';
+    } else {
+      btn.classList.remove('muted');
+      icon.textContent = '🔊';
+    }
   }
 
   /**
@@ -262,8 +314,8 @@ export class Game {
       return;
     }
 
-    // Handle game over - restart
-    if (this.state === GameState.GAME_OVER && this.input.isStartPressed()) {
+    // Handle game over or game won - restart
+    if ((this.state === GameState.GAME_OVER || this.state === GameState.GAME_WON) && this.input.isStartPressed()) {
       this.startNewGame();
       return;
     }
@@ -301,6 +353,14 @@ export class Game {
 
       case GameState.LEVEL_COMPLETE:
         this.updateLevelComplete();
+        break;
+
+      case GameState.INTERMISSION:
+        this.updateIntermission();
+        break;
+
+      case GameState.GAME_WON:
+        // Just waiting for input to restart
         break;
 
       case GameState.GAME_OVER:
@@ -749,8 +809,51 @@ export class Game {
     this.stateTimer--;
 
     if (this.stateTimer <= 0) {
+      // Check if we should play an intermission after this level
+      if (Intermission.shouldPlayAfterLevel(this.level)) {
+        this.startIntermission();
+      } else {
+        this.startNextLevel();
+      }
+    }
+  }
+
+  /**
+   * Start an intermission cutscene
+   */
+  private startIntermission(): void {
+    this.state = GameState.INTERMISSION;
+    this.intermission.start(this.level, () => {
+      this.onIntermissionComplete();
+    });
+  }
+
+  /**
+   * Update during INTERMISSION state
+   */
+  private updateIntermission(): void {
+    this.intermission.update();
+  }
+
+  /**
+   * Called when intermission completes
+   */
+  private onIntermissionComplete(): void {
+    // Check if this was the final level (game won)
+    if (Intermission.isFinalLevel(this.level)) {
+      this.gameWon();
+    } else {
       this.startNextLevel();
     }
+  }
+
+  /**
+   * Handle game won (completed all 5 levels)
+   */
+  private gameWon(): void {
+    this.state = GameState.GAME_WON;
+    this.sound.stopAll();
+    this.renderer.renderGameWonText();
   }
 
   /**
@@ -777,9 +880,8 @@ export class Game {
     this.firstFruitSpawned = false;
     this.secondFruitSpawned = false;
 
-    // Apply level-specific settings
-    const config = getLevelConfig(this.level);
-    this.renderer.setMazeColor(config.mazeColor);
+    // Apply level-specific settings (colors handled by theme system)
+    getLevelConfig(this.level);
 
     // Reset pellets
     this.collision.resetPellets();
@@ -835,8 +937,9 @@ export class Game {
       startScreen.classList.add('hidden');
     }
 
-    // Clear game over text
+    // Clear game over/won text
     this.renderer.clearGameOverText();
+    this.renderer.clearGameWonText();
 
     // Reset game state
     this.score = 0;
@@ -917,6 +1020,9 @@ export class Game {
     // Clear screen
     this.renderer.clear();
 
+    // Set level for theming
+    this.renderer.setLevel(this.level);
+
     // Render maze
     this.renderer.renderMaze();
 
@@ -971,6 +1077,14 @@ export class Game {
     // Update UI
     this.renderer.renderScore(this.score, this.highScore);
     this.renderer.renderLives(this.pacman.lives);
+
+    // Render intermission overlay if active
+    if (this.state === GameState.INTERMISSION) {
+      const desc = this.intermission.getSceneDescription();
+      this.renderer.renderIntermission(desc.title, desc.message, this.intermission.getProgress());
+    } else {
+      this.renderer.clearIntermission();
+    }
   }
 
   /**

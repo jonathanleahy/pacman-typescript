@@ -58,7 +58,7 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-mid) 50%, var(--gradient-end) 100%);
+  background: #000;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -461,7 +461,7 @@ body {
   padding: 20px;
 }
 
-/* Ambient background glow behind game */
+/* Black background behind game */
 #game-container::before {
   content: '';
   position: fixed;
@@ -469,7 +469,7 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-mid) 50%, var(--gradient-end) 100%);
+  background: #000;
   z-index: -2;
 }
 
@@ -709,4 +709,46 @@ body {
 #pause-overlay span {
   color: #ffff00;
   font-size: 24px;
+}
+
+/* Mute Button */
+.mute-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 40px;
+  height: 40px;
+  background: rgba(0, 0, 0, 0.7);
+  border: 2px solid var(--electric-blue);
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  transition: all 0.2s ease;
+}
+
+.mute-btn:hover {
+  background: rgba(0, 212, 255, 0.2);
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 15px var(--neon-cyan);
+}
+
+.mute-btn:active {
+  transform: scale(0.95);
+}
+
+.mute-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.mute-btn.muted {
+  border-color: #666;
+}
+
+.mute-btn.muted:hover {
+  border-color: #888;
+  box-shadow: 0 0 10px rgba(136, 136, 136, 0.5);
 }

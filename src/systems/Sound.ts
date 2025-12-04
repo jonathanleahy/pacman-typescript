@@ -57,6 +57,9 @@ interface SoundConfig {
  * Manages all game audio using Web Audio API for synthesized retro sounds.
  */
 export class Sound {
+  /** localStorage key for mute preference */
+  static readonly STORAGE_KEY = 'pacman-sound-muted';
+
   /** The Web Audio context - heart of all audio processing */
   private context: AudioContext | null = null;
 
@@ -77,6 +80,9 @@ export class Sound {
 
   /** Sound enabled flag */
   private enabled: boolean = true;
+
+  /** Handler for M key shortcut (stored for removal) */
+  private muteShortcutHandler: ((e: KeyboardEvent) => void) | null = null;
 
   /**
    * Sound configurations for each sound type
@@ -479,7 +485,7 @@ export class Sound {
   }
 
   /**
-   * Toggle mute state
+   * Toggle mute state and save to localStorage
    */
   toggleMute(): boolean {
     this.muted = !this.muted;
@@ -489,7 +495,20 @@ export class Sound {
       this.stopFrightSound();
     }
 
+    this.saveMutePreference();
     return this.muted;
+  }
+
+  /**
+   * Set mute state directly
+   */
+  setMuted(muted: boolean): void {
+    this.muted = muted;
+
+    if (this.muted) {
+      this.stopSiren();
+      this.stopFrightSound();
+    }
   }
 
   /**
@@ -497,6 +516,56 @@ export class Sound {
    */
   isMuted(): boolean {
     return this.muted;
+  }
+
+  /**
+   * Save mute preference to localStorage
+   */
+  saveMutePreference(): void {
+    try {
+      localStorage.setItem(Sound.STORAGE_KEY, String(this.muted));
+    } catch {
+      // localStorage not available (e.g., private browsing)
+    }
+  }
+
+  /**
+   * Load mute preference from localStorage
+   */
+  loadMutePreference(): void {
+    try {
+      const saved = localStorage.getItem(Sound.STORAGE_KEY);
+      if (saved === 'true') {
+        this.muted = true;
+      }
+    } catch {
+      // localStorage not available
+    }
+  }
+
+  /**
+   * Enable M key shortcut for mute toggle
+   */
+  enableMuteShortcut(): void {
+    if (this.muteShortcutHandler) return; // Already enabled
+
+    this.muteShortcutHandler = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() === 'm') {
+        this.toggleMute();
+      }
+    };
+
+    document.addEventListener('keydown', this.muteShortcutHandler);
+  }
+
+  /**
+   * Disable M key shortcut
+   */
+  disableMuteShortcut(): void {
+    if (this.muteShortcutHandler) {
+      document.removeEventListener('keydown', this.muteShortcutHandler);
+      this.muteShortcutHandler = null;
+    }
   }
 
   /**

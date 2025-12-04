@@ -50,7 +50,7 @@ export interface LevelConfig {
  */
 const MAZE_COLORS = [
   { main: '#2121de', light: '#5555ff' },  // Classic blue
-  { main: '#ff0000', light: '#ff5555' },  // Red
+  { main: '#cc4444', light: '#dd7777' },  // Muted red (less intense)
   { main: '#00aa00', light: '#55ff55' },  // Green
   { main: '#ff00ff', light: '#ff88ff' },  // Magenta
   { main: '#00ffff', light: '#88ffff' },  // Cyan
