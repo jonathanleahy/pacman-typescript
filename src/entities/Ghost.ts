@@ -142,6 +142,9 @@ export abstract class Ghost extends Entity {
     // Set initial speed
     this.speed = GHOST_SPEED;
 
+    // Slower animation for ghost feet wiggle
+    this.animationSpeed = 12;
+
     // Ghosts start stationary in the house
     this.direction = Direction.NONE;
   }
@@ -229,17 +232,18 @@ export abstract class Ghost extends Entity {
   private updateExitingMode(): void {
     const doorX = GHOST_HOUSE.centerCol * SCALED_TILE + SCALED_TILE / 2;
     const doorY = GHOST_HOUSE.exitRow * SCALED_TILE + SCALED_TILE / 2;
+    const exitSpeed = 2;  // Pixels per frame for exiting
 
     // First, center horizontally
-    if (Math.abs(this.position.x - doorX) > 1) {
-      this.position.x += this.position.x < doorX ? 1 : -1;
+    if (Math.abs(this.position.x - doorX) > exitSpeed) {
+      this.position.x += this.position.x < doorX ? exitSpeed : -exitSpeed;
       return;
     }
 
     // Then move up to exit
     this.position.x = doorX;
-    if (this.position.y > doorY) {
-      this.position.y -= 1;
+    if (this.position.y > doorY + exitSpeed) {
+      this.position.y -= exitSpeed;
       return;
     }
 

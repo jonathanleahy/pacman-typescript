@@ -20,7 +20,7 @@ export abstract class Entity {
   public speed: number = 0;
   protected animationFrame: number = 0;
   protected animationTimer: number = 0;
-  protected animationSpeed: number = 3;
+  protected animationSpeed: number = 6;  // Slower animation
 
   constructor(x: number, y: number) {
     this.position = { x, y };

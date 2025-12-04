@@ -771,7 +771,7 @@ export class WebGLRenderer {
     isDying: boolean = false,
     deathFrame: number = 0
   ): void {
-    const radius = SCALED_TILE / 2 - 1;
+    const radius = SCALED_TILE / 2 + 4;  // Larger Pac-Man
     const color = this.hexToRGBA(Colors.PACMAN);
 
     if (isDying) {
@@ -801,7 +801,7 @@ export class WebGLRenderer {
     animationFrame: number,
     frightenedFlash: boolean = false
   ): void {
-    const size = SCALED_TILE - 2;
+    const size = SCALED_TILE + 8;  // Larger ghosts
 
     // Determine color based on mode
     let bodyColor: number[];
@@ -882,7 +882,7 @@ export class WebGLRenderer {
         transform: translateX(-50%);
         color: #ffff00;
         font-family: 'Press Start 2P', monospace;
-        font-size: 14px;
+        font-size: 20px;
         z-index: 10;
       `;
       text.textContent = 'READY!';
@@ -913,7 +913,7 @@ export class WebGLRenderer {
         transform: translateX(-50%);
         color: #ff0000;
         font-family: 'Press Start 2P', monospace;
-        font-size: 14px;
+        font-size: 20px;
         z-index: 10;
       `;
       text.textContent = 'GAME  OVER';
