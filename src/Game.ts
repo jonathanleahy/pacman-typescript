@@ -630,6 +630,9 @@ export class Game {
       gameContainer.classList.add('power-mode');
     }
 
+    // Check for fruit spawn
+    this.checkFruitSpawn();
+
     // Start frightened mode
     this.startFrightenedMode();
   }

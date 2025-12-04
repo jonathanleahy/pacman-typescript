@@ -150,6 +150,6 @@ export function getLevelConfig(level: number): LevelConfig {
  * Get the number of pellets that triggers each fruit spawn
  */
 export const FRUIT_SPAWN_PELLETS = {
-  FIRST: 70,   // First fruit appears after 70 pellets
-  SECOND: 170, // Second fruit appears after 170 pellets
+  FIRST: 10,   // First fruit appears after 10 pellets (reduced for showcase)
+  SECOND: 30,  // Second fruit appears after 30 pellets (reduced for showcase)
 };
