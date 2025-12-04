@@ -207,14 +207,14 @@ export class WebGLRenderer {
       doorColor: [0.8, 1.0, 0.2, 1.0],         // Yellow-green
       doorGlow: [0.4, 0.6, 0.1, 0.5],
     },
-    // Level 3: Crimson Red - Danger zone
+    // Level 3: Muted Red - Softer danger zone
     3: {
-      name: 'Crimson Red',
-      wallColor: [0.85, 0.1, 0.15, 1.0],       // Deep red
-      wallGlow: [0.5, 0.05, 0.1, 1.0],
-      wallHighlight: [1.0, 0.4, 0.4, 1.0],
-      floorColor1: [0.05, 0.01, 0.01, 1.0],
-      floorColor2: [0.08, 0.02, 0.02, 1.0],
+      name: 'Muted Red',
+      wallColor: [0.8, 0.27, 0.27, 1.0],       // Muted red (#cc4444)
+      wallGlow: [0.4, 0.13, 0.13, 1.0],
+      wallHighlight: [0.87, 0.47, 0.47, 1.0],
+      floorColor1: [0.04, 0.01, 0.01, 1.0],
+      floorColor2: [0.06, 0.02, 0.02, 1.0],
       doorColor: [1.0, 0.6, 0.2, 1.0],         // Orange
       doorGlow: [0.6, 0.3, 0.1, 0.5],
     },
