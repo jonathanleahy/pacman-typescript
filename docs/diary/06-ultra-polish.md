@@ -195,8 +195,110 @@ Total: ~170 lines for 6 polish features.
 
 ---
 
+## Animated Intermission Cutscenes
+
+The original intermissions were just static text. The request: "more impressive level up cutscene, maybe pacman being chased by the monsters?"
+
+### Sprite-Based Animation System
+
+Created a flexible sprite system for cutscenes:
+
+```typescript
+export interface CutsceneSprite {
+  x: number;
+  y: number;
+  type: 'pacman' | 'ghost' | 'bigpacman';
+  color?: string;
+  direction: number;
+  scale: number;
+  frightened?: boolean;
+  animFrame: number;
+}
+```
+
+### Four Unique Scenes
+
+| Level | Title | Animation |
+|-------|-------|-----------|
+| 2 | ACT I: THE CHASE | Ghosts chase Pac-Man across screen |
+| 3 | ACT II: THE TABLES TURN | Giant Pac-Man chases frightened ghosts |
+| 4 | ACT III: THE CELEBRATION | Pac-Man spins, ghosts orbit around |
+| 5 | FINALE: VICTORY! | Victory parade with bouncing wave |
+
+Each scene has:
+- `setup()` - Initialize sprite positions
+- `update(sprites, frame, duration)` - Animate per frame
+
+### Canvas 2D Rendering for Cutscenes
+
+Cutscenes use a separate Canvas 2D layer on top of the WebGL game:
+
+```typescript
+private renderCutsceneSprite(ctx: CanvasRenderingContext2D, sprite: CutsceneSprite): void {
+  if (sprite.type === 'pacman' || sprite.type === 'bigpacman') {
+    this.renderCutscenePacman(ctx, sprite);
+  } else if (sprite.type === 'ghost') {
+    this.renderCutsceneGhost(ctx, sprite);
+  }
+}
+```
+
+This separation keeps the WebGL pipeline simple while allowing flexible 2D animations.
+
+---
+
+## Skip Level Cheat Code
+
+For testing and speedrunning, added a cheat code system:
+
+### Input Buffer
+
+```typescript
+private cheatBuffer: string = '';
+private static readonly CHEAT_SKIP_LEVEL = '===';
+
+// In handleKeyDown:
+if (e.key.length === 1) {
+  this.cheatBuffer += e.key;
+  if (this.cheatBuffer.length > 10) {
+    this.cheatBuffer = this.cheatBuffer.slice(-10);
+  }
+  if (this.cheatBuffer.endsWith(Input.CHEAT_SKIP_LEVEL)) {
+    this.cheatActivated = true;
+    this.cheatBuffer = '';
+  }
+}
+```
+
+### Smart Pellet Clearing
+
+The cheat leaves exactly 3 adjacent pellets so you can test level completion:
+
+```typescript
+skipToEndOfLevel(): Array<{ col: number; row: number }> {
+  // Find 3 horizontally adjacent pellets
+  for (let row = 0; row < this.pelletGrid.length && kept.length === 0; row++) {
+    const rowPellets = pellets.filter(p => p.row === row).sort((a, b) => a.col - b.col);
+    for (let i = 0; i < rowPellets.length - 2; i++) {
+      if (rowPellets[i + 1].col === rowPellets[i].col + 1 &&
+          rowPellets[i + 2].col === rowPellets[i].col + 2) {
+        kept = [rowPellets[i], rowPellets[i + 1], rowPellets[i + 2]];
+        break;
+      }
+    }
+  }
+  // Clear everything else
+}
+```
+
+Type `===` during gameplay to activate. Plays the extra life sound as confirmation.
+
+---
+
 ## Key Takeaway
 
 Polish features often have high impact-to-effort ratios. The maze flash is 20 lines of CSS but makes level completion feel *triumphant*. Elroy mode is 50 lines but adds authentic arcade tension.
+
+The animated cutscenes transform simple level transitions into memorable moments. The cheat code makes testing faster without breaking the game.
 
 *"The last 10% takes 10% of the time but creates 50% of the magic."*

@@ -1296,9 +1296,18 @@ export class WebGLRenderer {
   }
 
   /**
-   * Render intermission screen
+   * Render intermission screen with animated cutscene
    */
-  renderIntermission(title: string, message: string, progress: number): void {
+  renderIntermission(title: string, message: string, progress: number, sprites?: Array<{
+    x: number;
+    y: number;
+    type: 'pacman' | 'ghost' | 'bigpacman';
+    color?: string;
+    direction: number;
+    scale: number;
+    frightened?: boolean;
+    animFrame: number;
+  }>): void {
     let container = document.getElementById('intermission-container');
     if (!container) {
       container = document.createElement('div');
@@ -1311,39 +1320,57 @@ export class WebGLRenderer {
         height: 100%;
         display: flex;
         flex-direction: column;
-        justify-content: center;
+        justify-content: flex-start;
         align-items: center;
-        background: rgba(0, 0, 0, 0.9);
+        background: #000;
         z-index: 100;
+        overflow: hidden;
       `;
 
+      // Title at top
       const titleEl = document.createElement('div');
       titleEl.id = 'intermission-title';
       titleEl.style.cssText = `
         color: #00ffff;
         font-family: 'Press Start 2P', monospace;
         font-size: 32px;
-        margin-bottom: 20px;
-        text-shadow: 0 0 10px #00ffff;
+        margin-top: 60px;
+        margin-bottom: 10px;
+        text-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff;
       `;
       container.appendChild(titleEl);
 
+      // Message below title
       const messageEl = document.createElement('div');
       messageEl.id = 'intermission-message';
       messageEl.style.cssText = `
         color: #ffff00;
         font-family: 'Press Start 2P', monospace;
         font-size: 16px;
-        margin-bottom: 40px;
+        margin-bottom: 20px;
+        text-shadow: 0 0 10px #ffff00;
       `;
       container.appendChild(messageEl);
 
+      // Canvas for animated sprites
+      const cutsceneCanvas = document.createElement('canvas');
+      cutsceneCanvas.id = 'cutscene-canvas';
+      cutsceneCanvas.width = 672;
+      cutsceneCanvas.height = 400;
+      cutsceneCanvas.style.cssText = `
+        margin-top: 20px;
+      `;
+      container.appendChild(cutsceneCanvas);
+
+      // Skip text at bottom
       const skipEl = document.createElement('div');
       skipEl.id = 'intermission-skip';
       skipEl.style.cssText = `
-        color: #888888;
+        color: #666666;
         font-family: 'Press Start 2P', monospace;
         font-size: 10px;
+        margin-top: auto;
+        margin-bottom: 40px;
       `;
       skipEl.textContent = 'PRESS ANY KEY TO SKIP';
       container.appendChild(skipEl);
@@ -1357,6 +1384,19 @@ export class WebGLRenderer {
     if (titleEl) titleEl.textContent = title;
     if (messageEl) messageEl.textContent = message;
 
+    // Render animated sprites on cutscene canvas
+    const cutsceneCanvas = document.getElementById('cutscene-canvas') as HTMLCanvasElement;
+    if (cutsceneCanvas && sprites) {
+      const ctx = cutsceneCanvas.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, cutsceneCanvas.width, cutsceneCanvas.height);
+
+        for (const sprite of sprites) {
+          this.renderCutsceneSprite(ctx, sprite);
+        }
+      }
+    }
+
     // Fade effect based on progress
     if (progress < 0.1) {
       container.style.opacity = String(progress * 10);
@@ -1365,6 +1405,138 @@ export class WebGLRenderer {
     } else {
       container.style.opacity = '1';
     }
+  }
+
+  /**
+   * Render a single cutscene sprite on canvas
+   */
+  private renderCutsceneSprite(ctx: CanvasRenderingContext2D, sprite: {
+    x: number;
+    y: number;
+    type: 'pacman' | 'ghost' | 'bigpacman';
+    color?: string;
+    direction: number;
+    scale: number;
+    frightened?: boolean;
+    animFrame: number;
+  }): void {
+    ctx.save();
+    ctx.translate(sprite.x, sprite.y);
+
+    const baseSize = 24 * sprite.scale;
+
+    if (sprite.type === 'pacman' || sprite.type === 'bigpacman') {
+      // Draw Pac-Man
+      ctx.fillStyle = '#ffff00';
+
+      const mouthOpenings = [0, 0.15, 0.35, 0.15];
+      const mouthAngle = Math.PI * mouthOpenings[sprite.animFrame % 4];
+
+      let startAngle: number, endAngle: number;
+
+      switch (sprite.direction) {
+        case 3: // RIGHT
+          startAngle = mouthAngle;
+          endAngle = Math.PI * 2 - mouthAngle;
+          break;
+        case 2: // LEFT
+          startAngle = Math.PI + mouthAngle;
+          endAngle = Math.PI - mouthAngle;
+          break;
+        case 0: // UP
+          startAngle = -Math.PI / 2 + mouthAngle;
+          endAngle = -Math.PI / 2 - mouthAngle + Math.PI * 2;
+          break;
+        case 1: // DOWN
+          startAngle = Math.PI / 2 + mouthAngle;
+          endAngle = Math.PI / 2 - mouthAngle + Math.PI * 2;
+          break;
+        default:
+          startAngle = mouthAngle;
+          endAngle = Math.PI * 2 - mouthAngle;
+      }
+
+      ctx.beginPath();
+      ctx.arc(0, 0, baseSize / 2, startAngle, endAngle);
+      ctx.lineTo(0, 0);
+      ctx.closePath();
+      ctx.fill();
+
+      // Add glow
+      ctx.shadowColor = '#ffff00';
+      ctx.shadowBlur = 15 * sprite.scale;
+      ctx.fill();
+    } else {
+      // Draw Ghost
+      const ghostColor = sprite.frightened ? '#2121de' : (sprite.color || '#ff0000');
+      ctx.fillStyle = ghostColor;
+
+      const radius = baseSize / 2;
+      const waveOffset = (sprite.animFrame % 2) * 3;
+
+      // Ghost body (rounded top)
+      ctx.beginPath();
+      ctx.arc(0, -radius / 4, radius, Math.PI, 0, false);
+
+      // Wavy bottom
+      const waveCount = 3;
+      const waveWidth = (radius * 2) / waveCount;
+      const waveHeight = radius / 3;
+
+      ctx.lineTo(radius, radius / 2);
+      for (let i = waveCount; i > 0; i--) {
+        const wx = radius - (waveCount - i + 0.5) * waveWidth;
+        const wy = radius / 2 + ((i + waveOffset) % 2 === 0 ? waveHeight : 0);
+        ctx.lineTo(wx, wy);
+      }
+      ctx.lineTo(-radius, radius / 2);
+      ctx.closePath();
+      ctx.fill();
+
+      // Add glow
+      ctx.shadowColor = ghostColor;
+      ctx.shadowBlur = 10 * sprite.scale;
+      ctx.fill();
+
+      // Eyes
+      ctx.shadowBlur = 0;
+      const eyeRadius = radius / 4;
+      const eyeY = -radius / 4;
+      const pupilRadius = eyeRadius / 2;
+
+      // Frightened mode - different eyes
+      if (sprite.frightened) {
+        ctx.fillStyle = '#ffffff';
+        // Worried expression - small dots
+        ctx.beginPath();
+        ctx.arc(-radius / 3, eyeY, eyeRadius / 2, 0, Math.PI * 2);
+        ctx.arc(radius / 3, eyeY, eyeRadius / 2, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        // Normal eyes - white with pupils
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(-radius / 3, eyeY, eyeRadius, 0, Math.PI * 2);
+        ctx.arc(radius / 3, eyeY, eyeRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Pupils - direction based
+        ctx.fillStyle = '#0000ff';
+        let pupilOffsetX = 0, pupilOffsetY = 0;
+        switch (sprite.direction) {
+          case 2: pupilOffsetX = -pupilRadius / 2; break; // LEFT
+          case 3: pupilOffsetX = pupilRadius / 2; break; // RIGHT
+          case 0: pupilOffsetY = -pupilRadius / 2; break; // UP
+          case 1: pupilOffsetY = pupilRadius / 2; break; // DOWN
+        }
+        ctx.beginPath();
+        ctx.arc(-radius / 3 + pupilOffsetX, eyeY + pupilOffsetY, pupilRadius, 0, Math.PI * 2);
+        ctx.arc(radius / 3 + pupilOffsetX, eyeY + pupilOffsetY, pupilRadius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    ctx.restore();
   }
 
   /**

@@ -325,6 +325,31 @@ export class Game {
     if (queuedDir !== Direction.NONE) {
       this.pacman.setDirection(queuedDir);
     }
+
+    // Check for cheat code activation
+    if (this.input.isCheatActivated() && this.state === GameState.PLAYING) {
+      this.activateSkipCheat();
+    }
+  }
+
+  /**
+   * Activate skip to end of level cheat
+   */
+  private activateSkipCheat(): void {
+    const remaining = this.collision.skipToEndOfLevel();
+
+    // Update renderer to clear eaten pellets
+    for (let row = 0; row < 31; row++) {
+      for (let col = 0; col < 28; col++) {
+        const isRemaining = remaining.some(p => p.col === col && p.row === row);
+        if (!isRemaining && !this.collision.hasPellet(col, row)) {
+          this.renderer.eatPellet(col, row);
+        }
+      }
+    }
+
+    // Play a sound to confirm cheat
+    this.sound.play(SoundType.EXTRA_LIFE);
   }
 
   /**
@@ -1106,7 +1131,8 @@ export class Game {
     // Render intermission overlay if active
     if (this.state === GameState.INTERMISSION) {
       const desc = this.intermission.getSceneDescription();
-      this.renderer.renderIntermission(desc.title, desc.message, this.intermission.getProgress());
+      const sprites = this.intermission.getSprites();
+      this.renderer.renderIntermission(desc.title, desc.message, this.intermission.getProgress(), sprites);
     } else {
       this.renderer.clearIntermission();
     }

@@ -19,6 +19,13 @@ export class Input {
   private queuedDirection: DirectionType = Direction.NONE;
   private enabled = true;
 
+  /** Cheat code buffer - tracks recent key presses */
+  private cheatBuffer: string = '';
+  private cheatActivated: boolean = false;
+
+  /** Cheat codes */
+  private static readonly CHEAT_SKIP_LEVEL = '===';
+
   constructor() {
     this.setupKeyboardListeners();
     this.setupTouchListeners();
@@ -131,6 +138,20 @@ export class Input {
         e.preventDefault();
         break;
     }
+
+    // Track cheat codes (any printable character)
+    if (e.key.length === 1) {
+      this.cheatBuffer += e.key;
+      // Keep buffer small
+      if (this.cheatBuffer.length > 10) {
+        this.cheatBuffer = this.cheatBuffer.slice(-10);
+      }
+      // Check for cheat codes
+      if (this.cheatBuffer.endsWith(Input.CHEAT_SKIP_LEVEL)) {
+        this.cheatActivated = true;
+        this.cheatBuffer = '';
+      }
+    }
   }
 
   /**
@@ -225,6 +246,15 @@ export class Input {
     const pressed = this.state.pause;
     this.state.pause = false; // Consume the press
     return pressed;
+  }
+
+  /**
+   * Check if skip level cheat was activated
+   */
+  isCheatActivated(): boolean {
+    const activated = this.cheatActivated;
+    this.cheatActivated = false; // Consume the activation
+    return activated;
   }
 
   /**
