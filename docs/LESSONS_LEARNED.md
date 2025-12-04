@@ -199,6 +199,39 @@ Pac-Man without "waka waka" isn't Pac-Man. Synthesized sounds match the retro ae
 
 ---
 
+## Bug Fix Protocol: Test First
+
+**Rule**: When something is broken, write a failing test FIRST, then fix it.
+
+**Why this matters**:
+1. The test proves the bug exists (reproducible)
+2. The test defines what "fixed" means
+3. The fix is verified automatically
+4. The bug can never regress silently
+
+**Example workflow**:
+```bash
+# 1. Bug report: "Ghost feet wiggle too fast"
+# 2. Write test that captures expected behavior
+npm test -- --run  # Test fails (RED)
+
+# 3. Fix the code
+# 4. Verify
+npm test -- --run  # Test passes (GREEN)
+
+# 5. Commit
+git commit -m "Fix ghost animation speed"
+```
+
+**Anti-pattern**: Fixing bugs without tests means:
+- You might not actually fix it
+- You can't prove it's fixed
+- It might come back later
+
+*"If it's worth fixing, it's worth testing."*
+
+---
+
 ## What I'd Do Differently
 
 1. **Draw the state machine diagram first**: Ghost modes got complex. A visual diagram would have helped.

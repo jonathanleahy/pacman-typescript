@@ -44,8 +44,8 @@ export const SCORE_FRUIT = [100, 300, 500, 700, 1000, 2000, 3000, 5000];  // Che
 export const EXTRA_LIFE_SCORE = 10000;
 
 // Animation
-export const PACMAN_ANIMATION_SPEED = 3;  // Frames per animation frame
-export const GHOST_ANIMATION_SPEED = 8;
+export const PACMAN_ANIMATION_SPEED = 6;  // Slower mouth chomping
+export const GHOST_ANIMATION_SPEED = 16;  // Increased from 8 for smoother wiggle
 export const DEATH_ANIMATION_FRAMES = 11;
 export const DEATH_ANIMATION_SPEED = 8;
 
