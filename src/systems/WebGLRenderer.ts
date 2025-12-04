@@ -648,16 +648,19 @@ export class WebGLRenderer {
   }
 
   /**
-   * Render the maze walls
+   * Render the maze walls with glow effect
    *
    * The maze is drawn as a series of connected lines forming the
-   * iconic Pac-Man maze pattern.
+   * iconic Pac-Man maze pattern, with a neon glow effect.
    */
   renderMaze(): void {
-    const wallColor = this.hexToRGBA(Colors.MAZE_WALL);
+    const wallColor = this.hexToRGBA(this.currentMazeColor);
+    // Glow layer - very subtle
+    const glowColor = [wallColor[0], wallColor[1], wallColor[2], 0.1];
     const lineWidth = 2;
+    const glowWidth = 4;
 
-    // Draw each wall tile as a connected segment
+    // First pass: Draw glow layer (underneath)
     for (let row = 0; row < GRID_HEIGHT; row++) {
       for (let col = 0; col < GRID_WIDTH; col++) {
         const tile = MAZE_DATA[row]?.[col];
@@ -666,7 +669,38 @@ export class WebGLRenderer {
           const x = col * SCALED_TILE + SCALED_TILE / 2;
           const y = row * SCALED_TILE + SCALED_TILE / 2;
 
-          // Check neighbors and draw connections
+          const hasTop = this.isWall(col, row - 1);
+          const hasBottom = this.isWall(col, row + 1);
+          const hasLeft = this.isWall(col - 1, row);
+          const hasRight = this.isWall(col + 1, row);
+
+          // Draw glow connections
+          if (hasTop) {
+            this.addRect(x, y - SCALED_TILE / 4, glowWidth, SCALED_TILE / 2, glowColor);
+          }
+          if (hasBottom) {
+            this.addRect(x, y + SCALED_TILE / 4, glowWidth, SCALED_TILE / 2, glowColor);
+          }
+          if (hasLeft) {
+            this.addRect(x - SCALED_TILE / 4, y, SCALED_TILE / 2, glowWidth, glowColor);
+          }
+          if (hasRight) {
+            this.addRect(x + SCALED_TILE / 4, y, SCALED_TILE / 2, glowWidth, glowColor);
+          }
+          this.addCircle(x, y, glowWidth / 2, glowColor, 6);
+        }
+      }
+    }
+
+    // Second pass: Draw solid walls (on top)
+    for (let row = 0; row < GRID_HEIGHT; row++) {
+      for (let col = 0; col < GRID_WIDTH; col++) {
+        const tile = MAZE_DATA[row]?.[col];
+
+        if (tile === TileType.WALL) {
+          const x = col * SCALED_TILE + SCALED_TILE / 2;
+          const y = row * SCALED_TILE + SCALED_TILE / 2;
+
           const hasTop = this.isWall(col, row - 1);
           const hasBottom = this.isWall(col, row + 1);
           const hasLeft = this.isWall(col - 1, row);
@@ -689,10 +723,13 @@ export class WebGLRenderer {
           // Draw center point
           this.addCircle(x, y, lineWidth, wallColor, 6);
         } else if (tile === TileType.GHOST_DOOR) {
-          // Ghost house door (pink horizontal line)
+          // Ghost house door (pink with glow)
           const x = col * SCALED_TILE + SCALED_TILE / 2;
           const y = row * SCALED_TILE + SCALED_TILE / 2;
-          this.addRect(x, y, SCALED_TILE, 4, this.hexToRGBA('#ffb8de'));
+          const doorColor = this.hexToRGBA('#ffb8de');
+          const doorGlow = [doorColor[0], doorColor[1], doorColor[2], 0.3];
+          this.addRect(x, y, SCALED_TILE + 4, 8, doorGlow);
+          this.addRect(x, y, SCALED_TILE, 4, doorColor);
         }
       }
     }
@@ -709,10 +746,12 @@ export class WebGLRenderer {
   }
 
   /**
-   * Render all pellets
+   * Render all pellets with glow effect
    */
   renderPellets(): void {
     const pelletColor = this.hexToRGBA(Colors.PELLET);
+    // Very subtle glow
+    const glowColor = [pelletColor[0], pelletColor[1], pelletColor[2], 0.15];
 
     for (let row = 0; row < GRID_HEIGHT; row++) {
       for (let col = 0; col < GRID_WIDTH; col++) {
@@ -723,10 +762,14 @@ export class WebGLRenderer {
         const y = row * SCALED_TILE + SCALED_TILE / 2;
 
         if (tile === TileType.PELLET) {
+          // Subtle glow behind pellet
+          this.addCircle(x, y, 4, glowColor, 8);
           // Small pellet
           this.addCircle(x, y, 2, pelletColor, 8);
         } else if (tile === TileType.POWER_PELLET && this.powerPelletVisible) {
-          // Large power pellet (only when visible during blink)
+          // Subtle glow for power pellet
+          this.addCircle(x, y, 12, glowColor, 12);
+          // Large power pellet
           this.addCircle(x, y, 6, pelletColor, 12);
         }
       }
@@ -761,7 +804,7 @@ export class WebGLRenderer {
   }
 
   /**
-   * Render Pac-Man
+   * Render Pac-Man with glow effect
    */
   renderPacMan(
     x: number,
@@ -779,9 +822,15 @@ export class WebGLRenderer {
       const progress = deathFrame / 11;
       if (progress < 1) {
         const mouthAngle = Math.PI * progress;
+        // Soft multi-layer glow
+        this.addCircle(x, y, radius + 14, [color[0], color[1], color[2], 0.04], 16);
+        this.addCircle(x, y, radius + 8, [color[0], color[1], color[2], 0.06], 16);
         this.addPacMan(x, y, radius, Direction.UP, mouthAngle, color);
       }
     } else {
+      // Soft multi-layer glow
+      this.addCircle(x, y, radius + 14, [color[0], color[1], color[2], 0.04], 16);
+      this.addCircle(x, y, radius + 8, [color[0], color[1], color[2], 0.06], 16);
       // Normal animation
       const mouthOpenings = [0, 0.15, 0.35, 0.15];
       const mouthAngle = Math.PI * mouthOpenings[animationFrame % 4];
@@ -790,7 +839,7 @@ export class WebGLRenderer {
   }
 
   /**
-   * Render a ghost
+   * Render a ghost with glow effect
    */
   renderGhost(
     x: number,
@@ -811,12 +860,19 @@ export class WebGLRenderer {
         ? this.hexToRGBA(Colors.FRIGHTENED_FLASH)
         : this.hexToRGBA(Colors.FRIGHTENED);
     } else if (mode === GhostMode.EATEN) {
-      // Only draw eyes when eaten
+      // Only draw eyes when eaten - with subtle glow
+      const eyeGlow = [1, 1, 1, 0.2];
+      this.addCircle(x, y, 15, eyeGlow, 12);
       this.addGhostEyes(x, y, direction);
       return;
     } else {
       bodyColor = this.hexToRGBA(color);
     }
+
+    // Soft glow effect - multiple layers for blur-like effect
+    this.addCircle(x, y, size / 2 + 16, [bodyColor[0], bodyColor[1], bodyColor[2], 0.04], 16);
+    this.addCircle(x, y, size / 2 + 10, [bodyColor[0], bodyColor[1], bodyColor[2], 0.06], 16);
+    this.addCircle(x, y, size / 2 + 5, [bodyColor[0], bodyColor[1], bodyColor[2], 0.08], 16);
 
     // Draw ghost body
     this.addGhost(x, y, size, bodyColor, animationFrame);
@@ -860,6 +916,68 @@ export class WebGLRenderer {
       const life = document.createElement('div');
       life.className = 'life-icon';
       livesEl.appendChild(life);
+    }
+  }
+
+  /**
+   * Render a fruit bonus item
+   */
+  renderFruit(x: number, y: number, color: string, fruitType: number): void {
+    const fruitColor = this.hexToRGBA(color);
+    const size = 8; // Slightly larger than pellets
+
+    // Draw based on fruit type for variety
+    switch (fruitType) {
+      case 0: // Cherry - two circles with stem
+        this.addCircle(x - 4, y + 2, size - 2, fruitColor, 10);
+        this.addCircle(x + 4, y + 2, size - 2, fruitColor, 10);
+        // Stem
+        this.addRect(x, y - 6, 2, 8, [0.4, 0.26, 0.13, 1]);
+        break;
+      case 1: // Strawberry - triangular shape
+        this.addCircle(x, y + 2, size, fruitColor, 12);
+        this.addCircle(x, y - 3, size - 3, fruitColor, 8);
+        // Seeds (white dots)
+        this.addCircle(x - 3, y + 1, 1, [1, 1, 1, 1], 4);
+        this.addCircle(x + 3, y + 1, 1, [1, 1, 1, 1], 4);
+        this.addCircle(x, y + 4, 1, [1, 1, 1, 1], 4);
+        break;
+      case 2: // Orange - simple circle with leaf
+        this.addCircle(x, y, size + 1, fruitColor, 14);
+        this.addCircle(x + 2, y - 7, 3, [0, 0.8, 0, 1], 6); // Leaf
+        break;
+      case 3: // Apple - red with stem
+        this.addCircle(x, y, size + 1, fruitColor, 14);
+        this.addRect(x, y - 8, 2, 4, [0.4, 0.26, 0.13, 1]); // Stem
+        this.addCircle(x + 3, y - 6, 2, [0, 0.8, 0, 1], 5); // Leaf
+        break;
+      case 4: // Melon - large oval
+        this.addCircle(x, y, size + 2, fruitColor, 16);
+        // Stripes
+        this.addRect(x - 4, y, 1, 8, [0, 0.6, 0, 1]);
+        this.addRect(x, y, 1, 10, [0, 0.6, 0, 1]);
+        this.addRect(x + 4, y, 1, 8, [0, 0.6, 0, 1]);
+        break;
+      case 5: // Galaxian - spaceship shape
+        this.addCircle(x, y - 2, size - 2, fruitColor, 8);
+        this.addRect(x, y + 4, 10, 4, fruitColor);
+        this.addRect(x - 6, y + 2, 4, 6, fruitColor);
+        this.addRect(x + 6, y + 2, 4, 6, fruitColor);
+        break;
+      case 6: // Bell - bell shape
+        this.addCircle(x, y - 2, size, fruitColor, 12);
+        this.addRect(x, y + 4, 12, 4, fruitColor);
+        this.addCircle(x, y + 8, 3, fruitColor, 6);
+        break;
+      case 7: // Key
+        this.addCircle(x, y - 4, size - 2, fruitColor, 10);
+        this.addRect(x, y + 2, 4, 10, fruitColor);
+        this.addRect(x + 3, y + 4, 4, 2, fruitColor);
+        this.addRect(x + 3, y + 8, 4, 2, fruitColor);
+        break;
+      default:
+        // Fallback: simple circle
+        this.addCircle(x, y, size, fruitColor, 12);
     }
   }
 
@@ -930,21 +1048,6 @@ export class WebGLRenderer {
   }
 
   /**
-   * Render fruit
-   */
-  renderFruit(x: number, y: number, type: number): void {
-    const fruitColors = ['#f00', '#f00', '#ffa500', '#f00', '#0f0', '#ff0', '#ff0', '#0ff'];
-    const color = this.hexToRGBA(fruitColors[type] || '#f00');
-
-    this.addCircle(x, y, 6, color, 12);
-
-    // Stem
-    if (type < 5) {
-      this.addRect(x, y - 6, 2, 4, this.hexToRGBA('#0a0'));
-    }
-  }
-
-  /**
    * Render ghost score popup
    */
   renderGhostScore(x: number, y: number, score: number): void {
@@ -966,6 +1069,39 @@ export class WebGLRenderer {
 
     setTimeout(() => popup.remove(), 1000);
   }
+
+  /**
+   * Render fruit score popup
+   */
+  renderFruitScore(x: number, y: number, score: number): void {
+    const popup = document.createElement('div');
+    popup.className = 'fruit-score-popup';
+    popup.style.cssText = `
+      position: absolute;
+      left: ${x - 20}px;
+      top: ${y - 10}px;
+      color: #ff0;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 10px;
+      z-index: 20;
+      animation: fadeUp 1.5s ease-out forwards;
+      text-shadow: 0 0 5px #ff0;
+    `;
+    popup.textContent = score.toString();
+    document.getElementById('game-container')?.appendChild(popup);
+
+    setTimeout(() => popup.remove(), 1500);
+  }
+
+  /**
+   * Set maze wall color (for level progression)
+   */
+  setMazeColor(color: string): void {
+    // Update the maze color constant for re-rendering
+    this.currentMazeColor = color;
+  }
+
+  private currentMazeColor: string = '#2121de';
 
   /**
    * Render particles from a ParticleSystem
