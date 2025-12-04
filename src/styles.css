@@ -17,10 +17,10 @@
   --neon-orange: #ffb852;
   --ghost-frightened: #2121de;
 
-  /* 2025 additions */
-  --gradient-start: #0f0c29;
-  --gradient-mid: #302b63;
-  --gradient-end: #24243e;
+  /* 2025 additions - darker, more retro */
+  --gradient-start: #000000;
+  --gradient-mid: #0a0a15;
+  --gradient-end: #050510;
   --glass-bg: rgba(255, 255, 255, 0.05);
   --glass-border: rgba(255, 255, 255, 0.1);
   --electric-purple: #bf00ff;
@@ -76,10 +76,10 @@ body {
   width: 200%;
   height: 200%;
   background:
-    radial-gradient(circle at 20% 80%, rgba(191, 0, 255, 0.15) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(0, 212, 255, 0.15) 0%, transparent 50%),
-    radial-gradient(circle at 50% 50%, rgba(255, 255, 0, 0.1) 0%, transparent 60%);
-  animation: mesh-rotate 20s linear infinite;
+    radial-gradient(circle at 20% 80%, rgba(191, 0, 255, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(0, 212, 255, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 0, 0.05) 0%, transparent 60%);
+  animation: mesh-rotate 30s linear infinite;
 }
 
 @keyframes mesh-rotate {
